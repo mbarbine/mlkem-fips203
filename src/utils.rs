@@ -1,4 +1,5 @@
 use polynomial_ring::Polynomial;
+use sha256::digest;
 
 #[derive(Debug)]
 /// default parameters for module-LWE
@@ -31,4 +32,17 @@ impl Default for Parameters {
         let f = Polynomial::new(poly_vec);
         Parameters { n, q, k, sigma, omega, f }
     }
+}
+
+pub fn hash(m: Vec<i64>) -> String {
+	// Group the bits into bytes (8 bits each)
+	let byte_chunks: Vec<String> = m.chunks(8)
+		.map(|chunk| chunk.iter().map(|bit| bit.to_string()).collect())
+		.collect();
+	// Convert each binary string into character
+	let message_string: String = byte_chunks.iter()
+		.map(|byte| char::from_u32(i64::from_str_radix(byte, 2).unwrap() as u32).unwrap())
+		.collect();
+	//Apply sha256 hash
+	digest(message_string)
 }

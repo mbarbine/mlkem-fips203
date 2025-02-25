@@ -1,5 +1,6 @@
 use ml_kem::kem::KEM;
 use ml_kem::utils::Parameters;
+mod tests;
 
 fn main() {
     let params = Parameters::default();
