@@ -1,2 +1,2 @@
 # ml-kem
-Rust implementation of module-lattice (ML) key encapsulation mechanism (KEM) as specified in FIPS 203.
+Rust implementation of module-lattice key encapsulation mechanism (ML-KEM) as specified in FIPS 203.
