@@ -2,7 +2,7 @@ use module_lwe::utils::{gen_uniform_matrix,mul_mat_vec_simple,gen_small_vector,a
 use module_lwe::encrypt::encrypt;
 use module_lwe::decrypt::decrypt;
 use ring_lwe::utils::gen_binary_poly;
-use crate::utils::{Parameters, hash};
+use crate::utils::{Parameters, hash_h};
 use polynomial_ring::Polynomial;
 
 pub struct MLKEM {
@@ -31,7 +31,7 @@ impl MLKEM {
         ((a, b), s)
     }
 
-    pub fn encapsulate(&self, pk: (Vec<Vec<Polynomial<i64>>>, Vec<Polynomial<i64>>)) -> (String, (Vec<Polynomial<i64>>, Polynomial<i64>)) {
+    pub fn encapsulate(&self, pk: (Vec<Vec<Polynomial<i64>>>, Vec<Polynomial<i64>>)) -> (Vec<u8>, (Vec<Polynomial<i64>>, Polynomial<i64>)) {
         let params_mlwe = module_lwe::utils::Parameters { 
             n: self.params.n, 
             q: self.params.q, 
@@ -44,11 +44,11 @@ impl MLKEM {
         m.resize(self.params.n, 0);
 
         let ct = encrypt(&pk.0, &pk.1, &m, &params_mlwe, None);
-        let k = hash(m);
+        let k = hash_h(m);
         (k, ct)
     }
 
-    pub fn decapsulate(&self, sk: Vec<Polynomial<i64>>, ct: (Vec<Polynomial<i64>>, Polynomial<i64>)) -> String {
+    pub fn decapsulate(&self, sk: Vec<Polynomial<i64>>, ct: (Vec<Polynomial<i64>>, Polynomial<i64>)) -> Vec<u8> {
         let params_mlwe = module_lwe::utils::Parameters { 
             n: self.params.n, 
             q: self.params.q, 
@@ -60,7 +60,7 @@ impl MLKEM {
         let mut m = decrypt(&sk, &ct.0, &ct.1, &params_mlwe);
         m.resize(self.params.n, 0);
 
-        hash(m)
+        hash_h(m)
     }
 
     /*

@@ -11,6 +11,6 @@ mod tests {
         let (pk, sk) = mlkem.keygen();
         let (k, ct) = mlkem.encapsulate(pk);
 		let k_recovered = mlkem.decapsulate(sk, ct);
-        assert_eq!(k, k_recovered, "test failed: {} != {}", k, k_recovered);
+        assert_eq!(k, k_recovered, "test failed: {:?} != {:?}", k, k_recovered);
     }
 }
