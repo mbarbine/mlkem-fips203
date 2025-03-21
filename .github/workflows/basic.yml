@@ -1,0 +1,38 @@
+name: basic
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    # Install the Rust toolchain
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    # Cache Cargo dependencies to speed up builds
+    - name: Cache Cargo dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          cargo-${{ runner.os }}-
+
+    # Build the project
+    - name: Build
+      run: cargo build --verbose
+
+    # Run the tests
+    - name: Run Tests
+      run: cargo test --verbose
