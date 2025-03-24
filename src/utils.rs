@@ -2,6 +2,7 @@ use polynomial_ring::Polynomial;
 use std::hash::Hasher;
 use rs_sha3_256::{Sha3_256Hasher, HasherContext};
 use rs_sha3_512::Sha3_512Hasher;
+use rs_shake128::Shake128Hasher;
 use rs_shake256::Shake256Hasher;
 
 #[derive(Debug)]
@@ -89,5 +90,17 @@ pub fn prf_3(s: Vec<u8>, b: u8) -> Vec<u8> {
 	let mut shake_256hasher = Shake256Hasher::<192>::default();
 	shake_256hasher.write(&m);
 	let bytes_result = HasherContext::finish(&mut shake_256hasher);
+	bytes_result[0..].to_vec()
+}
+
+pub fn xof(bytes32: Vec<u8>, i: u8, j: u8) -> Vec<u8> {
+	// Concatenate bytes32, i, and j
+	let mut m = bytes32;
+	m.push(i);
+	m.push(j);
+	// Apply shake_128 hash
+	let mut shake_128hasher = Shake128Hasher::<840>::default();
+	shake_128hasher.write(&m);
+	let bytes_result = HasherContext::finish(&mut shake_128hasher);
 	bytes_result[0..].to_vec()
 }
