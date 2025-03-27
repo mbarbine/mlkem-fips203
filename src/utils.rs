@@ -93,6 +93,17 @@ pub fn prf_3(s: Vec<u8>, b: u8) -> Vec<u8> {
 	bytes_result[0..].to_vec()
 }
 
+/// eXtendable-Output Function (XOF) described in 4.9 of FIPS 203 (page 19)
+/// 
+/// # Arguments
+///
+/// * `bytes32` - A 32-byte input
+/// * `i` - An 8-bit integer, domain separation parameter
+/// * `j` - An 8-bit integer, domain separation parameter
+///
+/// # Returns
+///
+/// * Vec<u8> - An 840 byte output, the result of applying the shake_128 hash
 pub fn xof(bytes32: Vec<u8>, i: u8, j: u8) -> Vec<u8> {
 	// Concatenate bytes32, i, and j
 	let mut m = bytes32;
