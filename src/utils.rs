@@ -38,22 +38,55 @@ impl Default for Parameters {
     }
 }
 
+/// Hash function described in 4.4 of FIPS 203 (page 18)
+///
+/// # Arguments
+///
+/// * `m` - A vector of 64-bit integers
+///
+/// # Returns
+///
+/// * Vec<u8> - 32 byte output, the result of applying the sha3_256 hash
 pub fn hash_h(m: Vec<i64>) -> Vec<u8> {
-	// Group the bits into bytes (8 bits each)
-	let byte_chunks: Vec<String> = m.chunks(8)
-		.map(|chunk| chunk.iter().map(|bit| bit.to_string()).collect())
-		.collect();
-	// Convert each binary string into character
-	let message_string: String = byte_chunks.iter()
-		.map(|byte| char::from_u32(i64::from_str_radix(byte, 2).unwrap() as u32).unwrap())
-		.collect();
-	// Apply sha3_256 hash
-	let mut sha3_256hasher = Sha3_256Hasher::default();
-	sha3_256hasher.write(message_string.as_bytes());
-	let bytes_result = HasherContext::finish(&mut sha3_256hasher);
+    // Convert i64 vector directly into a byte slice
+    let bytes: Vec<u8> = m.iter()
+        .flat_map(|num| num.to_le_bytes()) // Convert each i64 to 8 bytes (little-endian)
+        .collect();
+
+    // Apply sha3_256 hash
+    let mut sha3_256hasher = Sha3_256Hasher::default();
+    sha3_256hasher.write(&bytes);
+    let bytes_result = HasherContext::finish(&mut sha3_256hasher);
+    
+    bytes_result.to_vec() // Return the hashed output
+}
+
+/// Hash function described in 4.5 of FIPS 203 (page 18)
+///
+/// # Arguments
+///
+/// * `m` - A vector of bytes
+///
+/// # Returns
+///
+/// * Vec<u8> - 32 byte output, the result of applying the shake_256 hash
+pub fn hash_j(m: Vec<u8>) -> Vec<u8> {
+	// Apply shake_256 hash
+	let mut shake_256hasher = Shake256Hasher::<32>::default();
+	shake_256hasher.write(&m);
+	let bytes_result = HasherContext::finish(&mut shake_256hasher);
 	bytes_result[0..].to_vec()
 }
 
+/// Hash function described in 4.4 of FIPS 203 (page 18)
+///
+/// # Arguments
+///
+/// * `m` - A vector of bytes
+///
+/// # Returns
+///
+/// * (Vec<u8>, Vec<u8>) - 32 byte outputs, the result of applying the sha3_512 hash
 pub fn hash_g(m: Vec<u8>) -> (Vec<u8>, Vec<u8>) {
 	// Apply sha3_512 hash
 	let mut sha3_512hasher = Sha3_512Hasher::default();
@@ -63,14 +96,17 @@ pub fn hash_g(m: Vec<u8>) -> (Vec<u8>, Vec<u8>) {
 	(bytes_result[..32].to_vec(), bytes_result[32..].to_vec())
 }
 
-pub fn hash_j(m: Vec<u8>) -> Vec<u8> {
-	// Apply shake_256 hash
-	let mut shake_256hasher = Shake256Hasher::<32>::default();
-	shake_256hasher.write(&m);
-	let bytes_result = HasherContext::finish(&mut shake_256hasher);
-	bytes_result[0..].to_vec()
-}
-
+/// Pseudorandom function described in 4.3 of FIPS 203 (page 18)
+/// Uses 128 bytes for the Shake256 hash
+///
+/// # Arguments
+///
+/// * `s` - 32 bytes
+/// * `b` - A single byte
+///
+/// # Returns
+///
+/// * Vec<u8> - 128 byte output, the result of applying the shake_256 hash
 pub fn prf_2(s: Vec<u8>, b: u8) -> Vec<u8> {
 	// Concatenate s and b
 	let mut m = s;
@@ -82,6 +118,17 @@ pub fn prf_2(s: Vec<u8>, b: u8) -> Vec<u8> {
 	bytes_result[0..].to_vec()
 }
 
+/// Pseudorandom function described in 4.3 of FIPS 203 (page 18)
+/// Uses 192 bytes for the Shake256 hash
+///
+/// # Arguments
+///
+/// * `s` - 32 bytes
+/// * `b` - A single byte
+///
+/// # Returns
+///
+/// * Vec<u8> - 192 byte output, the result of applying the shake_256 hash
 pub fn prf_3(s: Vec<u8>, b: u8) -> Vec<u8> {
 	// Concatenate s and b
 	let mut m = s;
@@ -103,7 +150,7 @@ pub fn prf_3(s: Vec<u8>, b: u8) -> Vec<u8> {
 ///
 /// # Returns
 ///
-/// * Vec<u8> - An 840 byte output, the result of applying the shake_128 hash
+/// * Vec<u8> - 840 byte output, the result of applying the shake_128 hash
 pub fn xof(bytes32: Vec<u8>, i: u8, j: u8) -> Vec<u8> {
 	// Concatenate bytes32, i, and j
 	let mut m = bytes32;
