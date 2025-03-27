@@ -47,6 +47,14 @@ impl Default for Parameters {
 /// # Returns
 ///
 /// * Vec<u8> - 32 byte output, the result of applying the sha3_256 hash
+///
+/// # Example
+/// ```
+/// use ml_kem::utils::hash_h;
+/// let input = vec![1i64, 2, 3, 4, 5, 6, 7, 8];
+/// let result = hash_h(input);
+/// assert_eq!(result.len(), 32); // Ensure the result is 32 bytes long
+/// ```
 pub fn hash_h(m: Vec<i64>) -> Vec<u8> {
     // Convert i64 vector directly into a byte slice
     let bytes: Vec<u8> = m.iter()
@@ -70,6 +78,14 @@ pub fn hash_h(m: Vec<i64>) -> Vec<u8> {
 /// # Returns
 ///
 /// * Vec<u8> - 32 byte output, the result of applying the shake_256 hash
+///
+/// # Example
+/// ```
+/// use ml_kem::utils::hash_j;
+/// let input = vec![0x01, 0x02, 0x03, 0x04];
+/// let result = hash_j(input);
+/// assert_eq!(result.len(), 32); // Ensure the result is 32 bytes long
+/// ```
 pub fn hash_j(m: Vec<u8>) -> Vec<u8> {
 	// Apply shake_256 hash
 	let mut shake_256hasher = Shake256Hasher::<32>::default();
@@ -87,6 +103,15 @@ pub fn hash_j(m: Vec<u8>) -> Vec<u8> {
 /// # Returns
 ///
 /// * (Vec<u8>, Vec<u8>) - 32 byte outputs, the result of applying the sha3_512 hash
+///
+/// # Example
+/// ```
+/// use ml_kem::utils::hash_g;
+/// let input = vec![0x01, 0x02, 0x03, 0x04];
+/// let (output1, output2) = hash_g(input);
+/// assert_eq!(output1.len(), 32); // Ensure the first part is 32 bytes long
+/// assert_eq!(output2.len(), 32); // Ensure the second part is 32 bytes long
+/// ```
 pub fn hash_g(m: Vec<u8>) -> (Vec<u8>, Vec<u8>) {
 	// Apply sha3_512 hash
 	let mut sha3_512hasher = Sha3_512Hasher::default();
