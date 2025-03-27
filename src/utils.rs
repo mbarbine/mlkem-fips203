@@ -4,8 +4,9 @@ use rs_sha3_256::{Sha3_256Hasher, HasherContext};
 use rs_sha3_512::Sha3_512Hasher;
 use rs_shake128::Shake128Hasher;
 use rs_shake256::Shake256Hasher;
+use getrandom::getrandom;
+use aes_ctr_drbg::DrbgCtx;
 
-#[derive(Debug)]
 /// default parameters for module-LWE
 pub struct Parameters {
 	/// degree of the polynomials
@@ -20,6 +21,8 @@ pub struct Parameters {
     pub omega: i64,
 	/// Polynomial modulus
     pub f: Polynomial<i64>,
+	/// generate random bytes
+	pub random_bytes: fn(usize, Option<&mut DrbgCtx>) -> Vec<u8>,
 }
 
 /// default parameters for module-LWE
@@ -34,8 +37,21 @@ impl Default for Parameters {
         poly_vec[0] = 1;
         poly_vec[n] = 1;
         let f = Polynomial::new(poly_vec);
-        Parameters { n, q, k, sigma, omega, f }
+        Parameters { n, q, k, sigma, omega, f, random_bytes: gen_random_bytes }
     }
+}
+
+/// generate random bytes using `getrandom` crate. 
+fn gen_random_bytes(size: usize, drbg: Option<&mut DrbgCtx>) -> Vec<u8> {
+	let mut out = vec![0; size];
+	if let Some(drbg) = drbg {
+		drbg.get_random(&mut out);
+	}
+	else {
+		//let mut out = vec![0u8; size];
+		getrandom(&mut out).expect("Failed to get random bytes");
+	}
+	out
 }
 
 /// Hash function described in 4.4 of FIPS 203 (page 18)

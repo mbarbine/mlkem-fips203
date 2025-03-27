@@ -4,15 +4,25 @@ use module_lwe::decrypt::decrypt;
 use ring_lwe::utils::gen_binary_poly;
 use crate::utils::{Parameters, hash_h};
 use polynomial_ring::Polynomial;
+use aes_ctr_drbg::DrbgCtx;
 
 pub struct MLKEM {
-    params: Parameters,
+    pub params: Parameters,
+    pub drbg: Option<DrbgCtx>,
 }
 
 impl MLKEM {
     // Constructor to initialize MLKEM with parameters
     pub fn new(params: Parameters) -> Self {
-        MLKEM { params } // Corrected: properly initializes and returns the struct
+        MLKEM { params, drbg: None}
+    }
+
+    /// Set the DRBG to be used for random bytes
+    pub fn set_drbg_seed(&mut self, seed: Vec<u8>) {
+        let p = vec![48, 0]; // personalization string must be min. 48 bytes long
+        let mut drbg = DrbgCtx::new(); // instantiate the DRBG
+	    drbg.init(&seed, p); // initialize the DRBG with the seed
+        self.drbg = Some(drbg); // Store the DRBG in the struct
     }
 
     pub fn keygen(&self) -> ((Vec<Vec<Polynomial<i64>>>, Vec<Polynomial<i64>>), Vec<Polynomial<i64>>) {
@@ -63,34 +73,4 @@ impl MLKEM {
         hash_h(m)
     }
 
-    /*
-
-    to be translate to Rust
-
-    def set_drbg_seed(self, seed):
-    """
-    Change entropy source to a DRBG and seed it with provided value.
-
-    Setting the seed switches the entropy source from :func:`os.urandom()`
-    to an AES256 CTR DRBG.
-
-    Used for both deterministic versions of ML-KEM as well as testing
-    alignment with the KAT vectors
-
-    NOTE:
-      currently requires pycryptodome for AES impl.
-
-    :param bytes seed: random bytes to seed the DRBG with
-    """
-    try:
-        from ..drbg.aes256_ctr_drbg import AES256_CTR_DRBG
-
-        self._drbg = AES256_CTR_DRBG(seed)
-        self.random_bytes = self._drbg.random_bytes
-    except ImportError as e:  # pragma: no cover
-        print(f"Error importing AES from pycryptodome: {e = }")
-        raise Warning(
-            "Cannot set DRBG seed due to missing dependencies, try installing requirements: pip -r install requirements"
-        )
-    */
 }
