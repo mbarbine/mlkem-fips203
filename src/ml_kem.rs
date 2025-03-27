@@ -7,8 +7,8 @@ use polynomial_ring::Polynomial;
 use aes_ctr_drbg::DrbgCtx;
 
 pub struct MLKEM {
-    params: Parameters,
-    drbg: Option<DrbgCtx>,
+    pub params: Parameters,
+    pub drbg: Option<DrbgCtx>,
 }
 
 impl MLKEM {
@@ -17,7 +17,7 @@ impl MLKEM {
         MLKEM { params, drbg: None}
     }
 
-    // Set the DRBG to be used for random bytes
+    /// Set the DRBG to be used for random bytes
     pub fn set_drbg_seed(&mut self, seed: Vec<u8>) {
         let p = vec![48, 0]; // personalization string must be min. 48 bytes long
         let mut drbg = DrbgCtx::new(); // instantiate the DRBG
