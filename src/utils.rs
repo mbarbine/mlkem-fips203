@@ -58,7 +58,7 @@ pub fn hash_h(m: Vec<i64>) -> Vec<u8> {
     sha3_256hasher.write(&bytes);
     let bytes_result = HasherContext::finish(&mut sha3_256hasher);
     
-    bytes_result.to_vec() // Return the hashed output
+    bytes_result.as_ref().to_vec() // Return the hashed output
 }
 
 /// Hash function described in 4.5 of FIPS 203 (page 18)
