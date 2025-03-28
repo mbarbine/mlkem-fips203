@@ -335,3 +335,70 @@ pub fn generate_matrix_from_seed(
         a_data
     }
 }
+
+/// Convert a vector of bytes into a vector of bits
+/// 
+/// # Arguments
+/// 
+/// * `bytes` - a vector of bytes
+/// 
+/// # Returns 
+///
+/// * Vec<u8> - a vector of bits
+///
+/// # Example
+/// ```
+/// use ml_kem::utils::bytes_to_bits;
+/// let bytes = vec![15, 200];
+/// let bits = bytes_to_bits(bytes);
+/// assert_eq!(bits, vec![1,1,1,1,0,0,0,0,0,0,0,1,0,0,1,1]);
+/// ```
+pub fn bytes_to_bits(bytes: Vec<u8>) -> Vec<u8> {
+	let mut bits = vec![0; bytes.len()*8];
+	let mut c = bytes;
+	for i in 0..c.len() {
+		for j in 0..8 {
+			bits[8*i+j] = c[i] % 2;
+			c[i] = c[i]/2;
+		}
+	}
+	bits
+}
+
+/// Generates a polynomial from bytes via the centered binomial distribution
+/// 
+/// # Arguments
+/// 
+/// * `input_bytes` - a vector of bytes
+/// * `eta` - 2 or 3
+/// * `n` - the degree of the polynomial
+/// 
+/// # Returns 
+///
+/// * Polynomial<i64> - a polynomial
+///
+/// # Example
+/// ```
+/// use ml_kem::utils::cbd;
+/// let n = 8;
+/// let eta = 3;
+/// let input_bytes = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06];
+/// let poly = cbd(input_bytes, eta, n);
+/// let poly_deg = poly.deg().unwrap_or(0);
+/// assert_eq!(poly_deg, n-1); // Ensure the polynomial has the correct degree
+/// ```
+pub fn cbd(input_bytes: Vec<u8>, eta: usize, n:usize) -> Polynomial<i64> {
+	assert_eq!(eta*n/4, input_bytes.len(), "input length must be eta*n/4");
+	let mut coefficients = vec![0;n];
+	let bits = bytes_to_bits(input_bytes);
+	for i in 0..n {
+		let mut a = 0i64;
+		let mut b = 0i64;
+		for j in 0..eta {
+			a += bits[2*i*eta+j] as i64;
+			b += bits[2*i*eta+eta+j] as i64;
+		}
+		coefficients[i] = a-b;
+	}
+	Polynomial::new(coefficients)
+}
