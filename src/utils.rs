@@ -287,3 +287,49 @@ pub fn xof(bytes32: Vec<u8>, i: u8, j: u8) -> Vec<u8> {
 	let bytes_result = HasherContext::finish(&mut shake_128hasher);
 	bytes_result[0..].to_vec()
 }
+
+/// Generate a random matrix from a seed using xof bytes
+/// 
+/// # Arguments
+/// 
+/// * `rho` - seed as vector of bytes
+/// * `rank` - the rank of the matrix `k`
+/// * `n` - the degree of the polynomial
+/// * `transpose` - return tranpose matrix
+/// 
+/// # Returns 
+///
+/// * Vec<Vec<Polynomial<i64>>> - a k x k matrix of polynomials in R_q
+///
+/// # Example
+/// ```
+/// let rho = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20];
+/// let rank = 2;
+/// let n = 8;
+/// a_hat = generate_matrix_from_seed(rho,rank,n,false);
+/// assert_eq!(a_hat[0][0].len(),n)
+/// ```
+///
+/// # Note
+/// The sampled polynomials are assumed to be the NTT transformed versions though they are random.
+pub fn generate_matrix_from_seed(
+    rho: Vec<u8>,
+    rank: usize,
+	n: usize,
+    transpose: bool,
+) -> Vec<Vec<Polynomial<i64>>> {
+    let mut a_data = vec![vec![Polynomial::new(vec![]); rank]; rank];
+
+    for i in 0..rank {
+        for j in 0..rank {
+            let xof_bytes = xof(rho.clone(), j as u8, i as u8);
+            a_data[i][j] = Polynomial::new(ntt_sample(&xof_bytes, n));
+        }
+    }
+
+    if transpose {
+        module_lwe::utils::transpose(&a_data)
+    } else {
+        a_data
+    }
+}
