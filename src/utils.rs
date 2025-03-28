@@ -80,8 +80,8 @@ fn gen_random_bytes(size: usize, drbg: Option<&mut DrbgCtx>) -> Vec<u8> {
 /// ```
 /// # Note
 /// The function samples coefficients from the input bytes, ensuring that they are less than 3329, the Kyber prime.
-pub fn ntt_sample(input_bytes: &[u8], n: usize) -> Vec<u16> {
-    let mut coefficients = vec![0u16; n];
+pub fn ntt_sample(input_bytes: &[u8], n: usize) -> Vec<i64> {
+    let mut coefficients = vec![0i64; n];
     let mut i = 0;
     let mut j = 0;
 
@@ -90,8 +90,8 @@ pub fn ntt_sample(input_bytes: &[u8], n: usize) -> Vec<u16> {
             break; // Prevent out-of-bounds access
         }
 
-        let d1 = input_bytes[i] as u16 + 256 * (input_bytes[i + 1] as u16 % 16);
-        let d2 = (input_bytes[i + 1] as u16 / 16) + 16 * input_bytes[i + 2] as u16;
+        let d1 = input_bytes[i] as i64 + 256 * (input_bytes[i + 1] as i64 % 16);
+        let d2 = (input_bytes[i + 1] as i64 / 16) + 16 * input_bytes[i + 2] as i64;
 
         if d1 < 3329 {
             coefficients[j] = d1;
@@ -303,11 +303,13 @@ pub fn xof(bytes32: Vec<u8>, i: u8, j: u8) -> Vec<u8> {
 ///
 /// # Example
 /// ```
+/// use ml_kem::utils::generate_matrix_from_seed;
 /// let rho = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20];
 /// let rank = 2;
 /// let n = 8;
-/// a_hat = generate_matrix_from_seed(rho,rank,n,false);
-/// assert_eq!(a_hat[0][0].len(),n)
+/// let a_hat = generate_matrix_from_seed(rho,rank,n,false);
+/// let poly_deg = a_hat[0][0].deg().unwrap_or(0);
+/// assert_eq!(poly_deg,n-1)
 /// ```
 ///
 /// # Note
