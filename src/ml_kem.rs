@@ -43,6 +43,7 @@ impl MLKEM {
     /// # Note
     /// The public key consists of a matrix `a` and a vector `b`, while the secret key is a vector `s`.
     pub fn keygen(&self) -> ((Vec<Vec<Polynomial<i64>>>, Vec<Polynomial<i64>>), Vec<Polynomial<i64>>) {
+        
         let a = gen_uniform_matrix(self.params.n, self.params.k, self.params.q, None); 
         
         let s = gen_small_vector(self.params.n, self.params.k, None);

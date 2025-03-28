@@ -41,18 +41,74 @@ impl Default for Parameters {
     }
 }
 
-/// generate random bytes using `getrandom` crate. 
+/// generate random bytes using `getrandom` crate
+/// or using the DRBG if a mutable reference is provided
 fn gen_random_bytes(size: usize, drbg: Option<&mut DrbgCtx>) -> Vec<u8> {
 	let mut out = vec![0; size];
 	if let Some(drbg) = drbg {
 		drbg.get_random(&mut out);
 	}
 	else {
-		//let mut out = vec![0u8; size];
 		getrandom(&mut out).expect("Failed to get random bytes");
 	}
 	out
 }
+
+/// Sample coefficients of a polynomial (assummed the NTT transformed version) from input bytes
+///
+/// Algorithm 1 (Parse)
+/// https://pq-crystals.org/kyber/data/kyber-specification-round3-20210804.pdf
+/// Algorithm 6 (Sample NTT)
+/// Parse: B^* -> R
+///
+/// # Arguments
+///
+/// * `input_bytes` - A byte slice containing the input data
+/// * `n` - The number of coefficients to sample
+///
+/// # Returns
+///
+/// * Vec<u16> - A vector of sampled coefficients
+///
+/// # Example
+/// ```
+/// use ml_kem::utils::ntt_sample;
+/// let input_bytes = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06];
+/// let n = 10;
+/// let result = ntt_sample(&input_bytes, n);
+/// assert_eq!(result.len(), n); // Ensure the result has the expected length
+/// ```
+/// # Note
+/// The function samples coefficients from the input bytes, ensuring that they are less than 3329, the Kyber prime.
+pub fn ntt_sample(input_bytes: &[u8], n: usize) -> Vec<i64> {
+    let mut coefficients = vec![0i64; n];
+    let mut i = 0;
+    let mut j = 0;
+
+    while j < n {
+        if i + 2 >= input_bytes.len() {
+            break; // Prevent out-of-bounds access
+        }
+
+        let d1 = input_bytes[i] as i64 + 256 * (input_bytes[i + 1] as i64 % 16);
+        let d2 = (input_bytes[i + 1] as i64 / 16) + 16 * input_bytes[i + 2] as i64;
+
+        if d1 < 3329 {
+            coefficients[j] = d1;
+            j += 1;
+        }
+
+        if d2 < 3329 && j < n {
+            coefficients[j] = d2;
+            j += 1;
+        }
+
+        i += 3;
+    }
+
+    coefficients
+}
+
 
 /// Hash function described in 4.4 of FIPS 203 (page 18)
 ///
@@ -230,4 +286,52 @@ pub fn xof(bytes32: Vec<u8>, i: u8, j: u8) -> Vec<u8> {
 	shake_128hasher.write(&m);
 	let bytes_result = HasherContext::finish(&mut shake_128hasher);
 	bytes_result[0..].to_vec()
+}
+
+/// Generate a random matrix from a seed using xof bytes
+/// 
+/// # Arguments
+/// 
+/// * `rho` - seed as vector of bytes
+/// * `rank` - the rank of the matrix `k`
+/// * `n` - the degree of the polynomial
+/// * `transpose` - return tranpose matrix
+/// 
+/// # Returns 
+///
+/// * Vec<Vec<Polynomial<i64>>> - a k x k matrix of polynomials in R_q
+///
+/// # Example
+/// ```
+/// use ml_kem::utils::generate_matrix_from_seed;
+/// let rho = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20];
+/// let rank = 2;
+/// let n = 8;
+/// let a_hat = generate_matrix_from_seed(rho,rank,n,false);
+/// let poly_deg = a_hat[0][0].deg().unwrap_or(0);
+/// assert_eq!(poly_deg,n-1)
+/// ```
+///
+/// # Note
+/// The sampled polynomials are assumed to be the NTT transformed versions though they are random.
+pub fn generate_matrix_from_seed(
+    rho: Vec<u8>,
+    rank: usize,
+	n: usize,
+    transpose: bool,
+) -> Vec<Vec<Polynomial<i64>>> {
+    let mut a_data = vec![vec![Polynomial::new(vec![]); rank]; rank];
+
+    for i in 0..rank {
+        for j in 0..rank {
+            let xof_bytes = xof(rho.clone(), j as u8, i as u8);
+            a_data[i][j] = Polynomial::new(ntt_sample(&xof_bytes, n));
+        }
+    }
+
+    if transpose {
+        module_lwe::utils::transpose(&a_data)
+    } else {
+        a_data
+    }
 }
