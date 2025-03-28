@@ -41,18 +41,74 @@ impl Default for Parameters {
     }
 }
 
-/// generate random bytes using `getrandom` crate. 
+/// generate random bytes using `getrandom` crate
+/// or using the DRBG if a mutable reference is provided
 fn gen_random_bytes(size: usize, drbg: Option<&mut DrbgCtx>) -> Vec<u8> {
 	let mut out = vec![0; size];
 	if let Some(drbg) = drbg {
 		drbg.get_random(&mut out);
 	}
 	else {
-		//let mut out = vec![0u8; size];
 		getrandom(&mut out).expect("Failed to get random bytes");
 	}
 	out
 }
+
+/// Sample coefficients of a polynomial (assummed the NTT transformed version) from input bytes
+///
+/// Algorithm 1 (Parse)
+/// https://pq-crystals.org/kyber/data/kyber-specification-round3-20210804.pdf
+/// Algorithm 6 (Sample NTT)
+/// Parse: B^* -> R
+///
+/// # Arguments
+///
+/// * `input_bytes` - A byte slice containing the input data
+/// * `n` - The number of coefficients to sample
+///
+/// # Returns
+///
+/// * Vec<u16> - A vector of sampled coefficients
+///
+/// # Example
+/// ```
+/// use ml_kem::utils::ntt_sample;
+/// let input_bytes = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06];
+/// let n = 10;
+/// let result = ntt_sample(&input_bytes, n);
+/// assert_eq!(result.len(), n); // Ensure the result has the expected length
+/// ```
+/// # Note
+/// The function samples coefficients from the input bytes, ensuring that they are less than 3329, the Kyber prime.
+pub fn ntt_sample(input_bytes: &[u8], n: usize) -> Vec<u16> {
+    let mut coefficients = vec![0u16; n];
+    let mut i = 0;
+    let mut j = 0;
+
+    while j < n {
+        if i + 2 >= input_bytes.len() {
+            break; // Prevent out-of-bounds access
+        }
+
+        let d1 = input_bytes[i] as u16 + 256 * (input_bytes[i + 1] as u16 % 16);
+        let d2 = (input_bytes[i + 1] as u16 / 16) + 16 * input_bytes[i + 2] as u16;
+
+        if d1 < 3329 {
+            coefficients[j] = d1;
+            j += 1;
+        }
+
+        if d2 < 3329 && j < n {
+            coefficients[j] = d2;
+            j += 1;
+        }
+
+        i += 3;
+    }
+
+    coefficients
+}
+
 
 /// Hash function described in 4.4 of FIPS 203 (page 18)
 ///
