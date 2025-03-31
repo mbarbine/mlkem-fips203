@@ -6,6 +6,7 @@ use rs_shake128::Shake128Hasher;
 use rs_shake256::Shake256Hasher;
 use getrandom::getrandom;
 use aes_ctr_drbg::DrbgCtx;
+use ntt::ntt;
 
 /// default parameters for module-LWE
 pub struct Parameters {
@@ -567,18 +568,17 @@ pub fn encode_poly(poly: &Polynomial<i64>, d: usize) -> Vec<u8> {
 ///
 /// # Example
 /// ```
-/// use polynomial_ring::Polynomial;
-/// use ml_kem::utils::encode_vec;
-/// let polys = vec![
-///     Polynomial::new(vec![1, 2, 3]),
-///     Polynomial::new(vec![4, 5, 6])
-/// ];
+/// use ml_kem::utils::{generate_polynomial,encode_vec};
+/// let sigma = vec![0u8; 32]; // Example seed
+/// let eta = 3;
+/// let n = 0;
+/// let poly_size = 256;
+/// let (p0, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size);
+/// let (p1, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size);
+/// let polys = vec![p0, p1];
 /// let encoded_bytes = encode_vec(&polys, 12);
 /// assert_eq!(encoded_bytes.len(), 768);  // Total length after encoding two polynomials
 /// ```
-///
-/// # Panics
-/// This function does not handle panics, but it assumes the polynomial vector is non-empty.
 pub fn encode_vec(v: &Vec<Polynomial<i64>>, d: usize) -> Vec<u8> {
     let mut encoded_bytes = Vec::new();
     for poly in v {
@@ -586,4 +586,30 @@ pub fn encode_vec(v: &Vec<Polynomial<i64>>, d: usize) -> Vec<u8> {
         encoded_bytes.extend(encoded_poly);  // Append each encoded polynomial's bytes
     }
     encoded_bytes
+}
+
+/// Applies the Number Theoretic Transform (NTT) to each polynomial in a vector.
+///
+/// This function takes a vector of polynomials, converts their coefficient slices 
+/// into owned `Vec<i64>` values, ensures they have a uniform length of `n` by 
+/// padding with zeros if necessary, and then applies the NTT to each polynomial.
+///
+/// # Arguments
+///
+/// * `v` - A reference to a vector of `Polynomial<i64>`, representing the input polynomials.
+/// * `omega` - The primitive root of unity used for the NTT.
+/// * `n` - The expected number of coefficients in each polynomial.
+/// * `q` - The modulus used for NTT computations.
+///
+/// # Returns
+///
+/// A vector of `Polynomial<i64>` where each polynomial has been transformed using NTT.
+pub fn vec_ntt(v: &Vec<Polynomial<i64>>, omega: i64, n: usize, q: i64) -> Vec<Polynomial<i64>> {
+    v.iter()
+        .map(|poly| {
+            let mut coeffs = poly.coeffs().to_vec(); // Convert slice to Vec<i64>
+            coeffs.resize(n, 0); // Ensure uniform length
+            Polynomial::new(ntt(&coeffs, omega, n, q))
+        })
+        .collect()
 }

@@ -1,11 +1,10 @@
-use crate::utils::{Parameters, hash_h, hash_g, encode_vec, generate_matrix_from_seed, generate_error_vector};
+use crate::utils::{Parameters, hash_h, hash_g, generate_matrix_from_seed, generate_error_vector, encode_vec, vec_ntt};
 use module_lwe::utils::{gen_uniform_matrix,mul_mat_vec_simple,gen_small_vector,add_vec};
 use module_lwe::encrypt::encrypt;
 use module_lwe::decrypt::decrypt;
 use ring_lwe::utils::gen_binary_poly;
 use polynomial_ring::Polynomial;
 use aes_ctr_drbg::DrbgCtx;
-use ntt::ntt;
 
 pub struct MLKEM {
     pub params: Parameters,
@@ -160,9 +159,9 @@ impl MLKEM {
     /// let params = Parameters::default();
     /// let mlkem = MLKEM::new(params);
     /// let d = vec![0x01, 0x02, 0x03, 0x04];
-    /// let (ek_pke, dk_pke) = mlkem.generate_k_pke_keygen(d);
+    /// let (ek_pke, dk_pke) = mlkem._k_pke_keygen(d);
     /// ```
-    pub fn generate_k_pke_keygen(
+    pub fn _k_pke_keygen(
         &self,
         d: Vec<u8>,
     ) -> (Vec<u8>, Vec<u8>) {
@@ -180,10 +179,12 @@ impl MLKEM {
         let (s, _prf_count) = generate_error_vector(sigma.clone(), self.params.eta_1, prf_count, self.params.k, self.params.n);
         let (e, _prf_count) = generate_error_vector(sigma.clone(), self.params.eta_1, prf_count, self.params.k, self.params.n);
 
-        // Compute public value (in NTT form)
-        let s_hat: Vec<_> = s.iter().map(|poly| Polynomial::new(ntt(poly.coeffs(), self.params.omega, self.params.n, self.params.q))).collect(); //apply NTT to each coeff of s
-        let e_hat: Vec<_> = e.iter().map(|poly| Polynomial::new(ntt(poly.coeffs(), self.params.omega, self.params.n, self.params.q))).collect();  // apply NTT to each coeff of e
-        let t_hat = add_vec(&mul_mat_vec_simple(&a_hat, &s_hat, self.params.q, &self.params.f, self.params.omega), &e_hat, self.params.q, &self.params.f); // Calculate A_hat @ s_hat + e_hat
+        // the NTT of s as an element of a rank k module over the polynomial ring
+        let s_hat = vec_ntt(&s,self.params.omega, self.params.n, self.params.q);
+        // the NTT of e as an element of a rank k module over the polynomial ring
+        let e_hat = vec_ntt(&e,self.params.omega, self.params.n, self.params.q);
+        // A_hat @ s_hat + e_hat
+        let t_hat = add_vec(&mul_mat_vec_simple(&a_hat, &s_hat, self.params.q, &self.params.f, self.params.omega), &e_hat, self.params.q, &self.params.f);
 
         // Encode the keys
         let mut ek_pke = encode_vec(&t_hat, 12); // Encoding vec of polynomials to bytes

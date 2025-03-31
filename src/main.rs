@@ -1,33 +1,20 @@
 use ml_kem::ml_kem::MLKEM;
 use ml_kem::utils::Parameters;
-use aes_ctr_drbg::DrbgCtx;
+use ml_kem::utils::generate_polynomial;
+use ntt::ntt;
 mod tests;
 
 fn main() {
+
     let params = Parameters::default();
+    let mlkem = MLKEM::new(params);
+    let sigma = vec![0u8; 32]; // Example seed
+    let prf_count = 0;
+    let (poly, _prf_count) = generate_polynomial(sigma.clone(), mlkem.params.eta_1, prf_count, mlkem.params.n);
+    let ntt_poly = ntt(poly.coeffs(), mlkem.params.omega, mlkem.params.n, mlkem.params.q);
+    println!("{:?}", ntt_poly);
 
-    // Generate key pair
-    let mlkem = MLKEM::new(params); 
-    let (public_key, secret_key) = mlkem.keygen();
-
-    // Print keys for verification
-    println!("Public Key: {:?}", public_key);
-    println!("Secret Key: {:?}", secret_key);
-
-    // personalization string must be min. 48 bytes long
-	let p = vec![48, 0];
-
-	// get entropy from somewhere, f.e. /dev/random
-	let entropy: [u8; 48] = [0x04; 48]; // don't use that!
-
-	let mut drbg = DrbgCtx::new();
-	drbg.init(&entropy, p);
-
-	// get 10 bytes
-	let mut out = Vec::new();
-	out.resize(10, 0);
-	drbg.get_random(&mut out);
-
-    println!("{:?}", out);
+    let d = vec![0x01, 0x02, 0x03, 0x04];
+    let (_ek_pke, _dk_pke) = mlkem._k_pke_keygen(d);
 
 }
