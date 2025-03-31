@@ -613,3 +613,76 @@ pub fn vec_ntt(v: &Vec<Polynomial<i64>>, omega: i64, n: usize, q: i64) -> Vec<Po
         })
         .collect()
 }
+
+/// Decodes a byte vector into a polynomial based on the FIPS 203 standard (Algorithm 3).
+///
+/// # Arguments
+/// * `input_bytes` - The bytes to be decoded.
+/// * `d` - The bit-width parameter for the encoding process. Typically 12 for some cryptographic algorithms.
+///
+/// # Returns
+/// * `Polynomial<i64>` - The resulting polynomial.
+///
+/// # Example
+/// ```
+/// use polynomial_ring::Polynomial;
+/// use ml_kem::utils::{generate_polynomial,encode_poly,decode_poly};
+/// let sigma = vec![0u8; 32]; // Example seed
+/// let eta = 3;
+/// let n = 0;
+/// let poly_size = 256;
+/// let (poly, new_n) = generate_polynomial(sigma, eta, n, poly_size);
+/// let encoded = encode_poly(&poly, 12);
+/// let decoded = decode_poly(encoded, 12);
+/// assert_eq!(poly, decoded);
+/// ```
+pub fn decode_poly(input_bytes: Vec<u8>, d: usize) -> Polynomial<i64> {
+	assert_eq!(256*d, input_bytes.len()*8, "256*d must be length of input bytes times 8");
+	// Set the modulus
+	let mut m = 3329;
+	if d < 12 {
+		m = 1 << d;
+	}
+	
+	let mut coeffs = vec![0; 256];
+	let b = bytes_to_bits(input_bytes);
+	// Form bits into integer coefficients
+	for i in 0..256 {
+		for j in 0..d {	
+			coeffs[i] += (b[i*d+j] as i64)*(1 << j) % m;
+		}
+	}
+	Polynomial::new(coeffs)
+}
+
+/// Decodes a byte vector into a vector of polynomials.
+///
+/// # Arguments
+/// * `input_bytes` - The bytes to be decoded.
+/// * `d` - The bit-width parameter for the encoding process. Typically 12 for some cryptographic algorithms.
+///
+/// # Returns
+/// * `Vec<Polynomial<i64>>` - The resulting vector of polynomials.
+///
+/// # Example
+/// ```
+/// use ml_kem::utils::{generate_polynomial,encode_vec,decode_vector};
+/// let sigma = vec![0u8; 32]; // Example seed
+/// let eta = 3;
+/// let n = 0;
+/// let poly_size = 256;
+/// let (p0, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size);
+/// let (p1, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size);
+/// let polys = vec![p0, p1];
+/// let encoded_bytes = encode_vec(&polys, 12);
+/// let decoded = decode_vector(encoded_bytes, 2, 12);
+/// assert_eq!(polys, decoded);
+/// ```
+pub fn decode_vector(input_bytes: Vec<u8>, k: usize, d: usize) -> Vec<Polynomial<i64>> {
+	assert_eq!(256*d*k, input_bytes.len()*8, "256*d*k must be length of input bytes times 8");	
+	let mut v = vec![Polynomial::new(vec![]); k];
+	for i in 0..k {
+		v[i] = decode_poly(input_bytes[i..i+32*d].to_vec(), d);
+	}
+	v
+}
