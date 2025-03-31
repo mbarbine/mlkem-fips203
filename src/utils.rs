@@ -682,7 +682,7 @@ pub fn decode_vector(input_bytes: Vec<u8>, k: usize, d: usize) -> Vec<Polynomial
 	assert_eq!(256*d*k, input_bytes.len()*8, "256*d*k must be length of input bytes times 8");	
 	let mut v = vec![Polynomial::new(vec![]); k];
 	for i in 0..k {
-		v[i] = decode_poly(input_bytes[i..i+32*d].to_vec(), d);
+		v[i] = decode_poly(input_bytes[i*32*d..i*32*d+32*d].to_vec(), d);
 	}
 	v
 }
