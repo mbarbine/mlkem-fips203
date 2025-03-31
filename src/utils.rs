@@ -15,6 +15,14 @@ pub struct Parameters {
     pub q: i64,
 	/// Module rank	
     pub k: usize,
+	/// centered binomial distribution width
+	pub eta_1: usize,
+	/// centered binomial distribution width
+	pub eta_2: usize,
+	/// du
+	pub du: usize,
+	/// dv
+	pub dv: usize,
     /// Standard deviation of the error
     pub sigma: f64,
 	/// 2n-th root of unity	
@@ -33,11 +41,15 @@ impl Default for Parameters {
         let k = 8;
         let sigma = 3.19;
 		let omega = ntt::omega(q, 2*n);
+		let eta_1 = 3;
+		let eta_2 = 2;
+		let du = 10;
+		let dv = 4;
         let mut poly_vec = vec![0i64;n+1];
         poly_vec[0] = 1;
         poly_vec[n] = 1;
         let f = Polynomial::new(poly_vec);
-        Parameters { n, q, k, sigma, omega, f, random_bytes: gen_random_bytes }
+        Parameters { n, q, k, sigma, omega, eta_1, eta_2, du, dv, f, random_bytes: gen_random_bytes }
     }
 }
 
@@ -495,4 +507,79 @@ pub fn generate_polynomial(
     let prf_output = prf_3(sigma, n);
     let poly = cbd(prf_output, eta, poly_size);
     (poly, n + 1)
+}
+
+/// Encodes a polynomial into a byte vector based on the FIPS 203 standard (Algorithm 3, inverse).
+/// This function shifts and ORs the polynomial coefficients into an integer, then serializes the integer
+/// into a byte array.
+///
+/// # Arguments
+/// * `poly` - A reference to the `Polynomial<i64>` that needs to be encoded.
+/// * `d` - The bit-width parameter for the encoding process. Typically 12 for some cryptographic algorithms.
+///
+/// # Returns
+/// * `Vec<u8>` - The resulting encoded byte vector representing the polynomial.
+///
+/// # Example
+/// ```
+/// use polynomial_ring::Polynomial;
+/// use ml_kem::utils::encode_poly;
+/// let poly = Polynomial::new(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
+/// let encoded = encode_poly(&poly, 12);
+/// assert_eq!(encoded.len(), 384); // 32 * d (d = 12)
+/// ```
+pub fn encode_poly(poly: &Polynomial<i64>, d: usize) -> Vec<u8> {
+    let mut t: i64 = 0;
+
+    // Loop through all 255 coefficients
+    for i in 0..255 {
+        // Shift t and OR with the current coefficient
+        t |= poly.coeffs()[256 - i - 1];
+        t <<= d;
+    }
+    // OR with the last coefficient
+    t |= poly.coeffs()[0];
+
+    // Convert to bytes (little-endian) and return
+    let byte_len = 32 * d;  // Calculate the required byte length
+    let mut result = Vec::with_capacity(byte_len);
+    for _ in 0..byte_len {
+        result.push((t & 0xFF) as u8);
+        t >>= 8;
+    }
+    result
+}
+
+/// Encodes a vector of polynomials into a single vector of bytes.
+/// This function uses `encode_polynomial` on each polynomial and concatenates
+/// the resulting byte arrays into one `Vec<u8>`.
+///
+/// # Arguments
+/// * `polys` - A reference to a `Vec<Polynomial<i64>>` that contains the polynomials to be encoded.
+/// * `d` - The bit-width parameter for the encoding process. Typically 12 for some cryptographic algorithms.
+///
+/// # Returns
+/// * `Vec<u8>` - A single vector containing all the encoded polynomials.
+///
+/// # Example
+/// ```
+/// use polynomial_ring::Polynomial;
+/// use ml_kem::utils::encode_vec;
+/// let polys = vec![
+///     Polynomial::new(vec![1, 2, 3]),
+///     Polynomial::new(vec![4, 5, 6])
+/// ];
+/// let encoded_bytes = encode_vec(&polys, 12);
+/// assert_eq!(encoded_bytes.len(), 768);  // Total length after encoding two polynomials
+/// ```
+///
+/// # Panics
+/// This function does not handle panics, but it assumes the polynomial vector is non-empty.
+pub fn encode_vec(v: &Vec<Polynomial<i64>>, d: usize) -> Vec<u8> {
+    let mut encoded_bytes = Vec::new();
+    for poly in v {
+        let encoded_poly = encode_poly(poly, d);
+        encoded_bytes.extend(encoded_poly);  // Append each encoded polynomial's bytes
+    }
+    encoded_bytes
 }

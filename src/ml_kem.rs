@@ -1,10 +1,11 @@
+use crate::utils::{Parameters, hash_h, hash_g, encode_vec, generate_matrix_from_seed, generate_error_vector};
 use module_lwe::utils::{gen_uniform_matrix,mul_mat_vec_simple,gen_small_vector,add_vec};
 use module_lwe::encrypt::encrypt;
 use module_lwe::decrypt::decrypt;
 use ring_lwe::utils::gen_binary_poly;
-use crate::utils::{Parameters, hash_h};
 use polynomial_ring::Polynomial;
 use aes_ctr_drbg::DrbgCtx;
+use ntt::ntt;
 
 pub struct MLKEM {
     pub params: Parameters,
@@ -134,6 +135,62 @@ impl MLKEM {
         m.resize(self.params.n, 0);
 
         hash_h(m)
+    }
+
+    /// Generates an encryption key and a corresponding decryption key based on the
+    /// specified parameter `d` and following Algorithm 13 (FIPS 203).
+    ///
+    /// This function generates two 32-byte seeds using the `hash_g` function,
+    /// computes the matrix `A_hat`, generates error vectors `s` and `e` from
+    /// the Centered Binomial Distribution, applies NTT transformations to `s`
+    /// and `e`, and computes the public key (`ek_pke`) and the private key (`dk_pke`).
+    ///
+    /// # Arguments
+    /// * `d` - The input parameter (likely a domain or identifier) to seed the key generation.
+    ///
+    /// # Returns
+    /// * A tuple containing:
+    ///   - `ek_pke`: The encryption key, which is the public value `t_hat` encoded with `rho`.
+    ///   - `dk_pke`: The decryption key, which is the encoded `s_hat`.
+    /// 
+    /// # Example
+    /// ```
+    /// use ml_kem::utils::Parameters;
+    /// use ml_kem::ml_kem::MLKEM;
+    /// let params = Parameters::default();
+    /// let mlkem = MLKEM::new(params);
+    /// let d = vec![0x01, 0x02, 0x03, 0x04];
+    /// let (ek_pke, dk_pke) = mlkem.generate_k_pke_keygen(d);
+    /// ```
+    pub fn generate_k_pke_keygen(
+        &self,
+        d: Vec<u8>,
+    ) -> (Vec<u8>, Vec<u8>) {
+        // Expand 32 + 1 bytes to two 32-byte seeds.
+        // Note: rho, sigma are generated using hash_g
+        let (rho, sigma) = hash_g([d.clone(), vec![self.params.k as u8]].concat());
+
+        // Generate A_hat from seed rho
+        let a_hat = generate_matrix_from_seed(rho.clone(), self.params.k, self.params.n, false);
+
+        // Set counter for PRF
+        let prf_count = 0;
+
+        // Generate the error vectors s and e
+        let (s, _prf_count) = generate_error_vector(sigma.clone(), self.params.eta_1, prf_count, self.params.k, self.params.n);
+        let (e, _prf_count) = generate_error_vector(sigma.clone(), self.params.eta_1, prf_count, self.params.k, self.params.n);
+
+        // Compute public value (in NTT form)
+        let s_hat: Vec<_> = s.iter().map(|poly| Polynomial::new(ntt(poly.coeffs(), self.params.omega, self.params.n, self.params.q))).collect(); //apply NTT to each coeff of s
+        let e_hat: Vec<_> = e.iter().map(|poly| Polynomial::new(ntt(poly.coeffs(), self.params.omega, self.params.n, self.params.q))).collect();  // apply NTT to each coeff of e
+        let t_hat = add_vec(&mul_mat_vec_simple(&a_hat, &s_hat, self.params.q, &self.params.f, self.params.omega), &e_hat, self.params.q, &self.params.f); // Calculate A_hat @ s_hat + e_hat
+
+        // Encode the keys
+        let mut ek_pke = encode_vec(&t_hat, 12); // Encoding vec of polynomials to bytes
+        ek_pke.extend_from_slice(&rho); // append rho, output of hash function
+        let dk_pke = encode_vec(&s_hat, 12); // Encoding s_hat for dk_pke
+
+        (ek_pke, dk_pke)
     }
 
 }
