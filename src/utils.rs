@@ -447,6 +447,45 @@ pub fn generate_error_vector(
     (elements, current_n)
 }
 
+/// Generates a polynomial sampled from the Centered Binomial Distribution (CBD).
+///
+/// This function derives a pseudo-random byte stream using `prf_3` with the given
+/// `sigma` and `n` as input, then maps the output to a polynomial using the CBD function.
+///
+/// # Arguments
+/// 
+/// * `sigma` - A vector of bytes serving as a seed for pseudo-random generation.
+/// * `eta` - The parameter controlling the shape of the binomial distribution.
+/// * `n` - A unique identifier (byte) for domain separation in the PRF.
+/// * `poly_size` - The degree of the polynomial.
+///
+/// # Returns
+/// 
+/// * A tuple containing:
+///   - A `Polynomial<i64>` sampled from the centered binomial distribution.
+///   - The updated `n + 1`, ensuring unique PRF inputs across calls.
+///
+/// # Example
+/// ```
+/// use ml_kem::utils::generate_polynomial;
+///
+/// let sigma = vec![0u8; 32]; // Example seed
+/// let eta = 3;
+/// let n = 0;
+/// let poly_size = 256;
+///
+/// let (poly, new_n) = generate_polynomial(sigma, eta, n, poly_size);
+///
+/// assert_eq!(new_n, 1);
+/// assert_eq!(poly.coeffs().len(), poly_size);
+/// ```
+///
+/// # Notes
+/// - `prf_3` produces 192 bytes, and for cbd we require eta*poly_size/4 = 192, the `prf` output length.
+/// - The value of `n` should be unique per call to ensure distinct polynomials.
+///
+/// # Panics
+/// - This function panics if `cbd` asserts that the input byte length is incorrect.
 pub fn generate_polynomial(
     sigma: Vec<u8>,
     eta: usize,
