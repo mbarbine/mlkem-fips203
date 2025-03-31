@@ -6,6 +6,7 @@ use rs_shake128::Shake128Hasher;
 use rs_shake256::Shake256Hasher;
 use getrandom::getrandom;
 use aes_ctr_drbg::DrbgCtx;
+use ntt::ntt;
 
 /// default parameters for module-LWE
 pub struct Parameters {
@@ -15,6 +16,14 @@ pub struct Parameters {
     pub q: i64,
 	/// Module rank	
     pub k: usize,
+	/// centered binomial distribution width
+	pub eta_1: usize,
+	/// centered binomial distribution width
+	pub eta_2: usize,
+	/// du
+	pub du: usize,
+	/// dv
+	pub dv: usize,
     /// Standard deviation of the error
     pub sigma: f64,
 	/// 2n-th root of unity	
@@ -28,16 +37,20 @@ pub struct Parameters {
 /// default parameters for module-LWE
 impl Default for Parameters {
     fn default() -> Self {
-        let n = 512;
+        let n = 256;
         let q = 12289;
-        let k = 8;
+        let k = 4;
         let sigma = 3.19;
 		let omega = ntt::omega(q, 2*n);
+		let eta_1 = 3;
+		let eta_2 = 2;
+		let du = 10;
+		let dv = 4;
         let mut poly_vec = vec![0i64;n+1];
         poly_vec[0] = 1;
         poly_vec[n] = 1;
         let f = Polynomial::new(poly_vec);
-        Parameters { n, q, k, sigma, omega, f, random_bytes: gen_random_bytes }
+        Parameters { n, q, k, sigma, omega, eta_1, eta_2, du, dv, f, random_bytes: gen_random_bytes }
     }
 }
 
@@ -495,4 +508,108 @@ pub fn generate_polynomial(
     let prf_output = prf_3(sigma, n);
     let poly = cbd(prf_output, eta, poly_size);
     (poly, n + 1)
+}
+
+/// Encodes a polynomial into a byte vector based on the FIPS 203 standard (Algorithm 3, inverse).
+/// This function shifts and ORs the polynomial coefficients into an integer, then serializes the integer
+/// into a byte array.
+///
+/// # Arguments
+/// * `poly` - A reference to the `Polynomial<i64>` that needs to be encoded.
+/// * `d` - The bit-width parameter for the encoding process. Typically 12 for some cryptographic algorithms.
+///
+/// # Returns
+/// * `Vec<u8>` - The resulting encoded byte vector representing the polynomial.
+///
+/// # Example
+/// ```
+/// use polynomial_ring::Polynomial;
+/// use ml_kem::utils::{generate_polynomial,encode_poly};
+/// let sigma = vec![0u8; 32]; // Example seed
+/// let eta = 3;
+/// let n = 0;
+/// let poly_size = 256;
+/// let (poly, new_n) = generate_polynomial(sigma, eta, n, poly_size);
+/// let encoded = encode_poly(&poly, 12);
+/// assert_eq!(encoded.len(), 384); // 32 * d (d = 12)
+/// ```
+pub fn encode_poly(poly: &Polynomial<i64>, d: usize) -> Vec<u8> {
+    let mut t: i64 = 0;
+
+    // Loop through all 255 coefficients
+    for i in 0..255 {
+        // Shift t and OR with the current coefficient
+        t |= poly.coeffs()[256 - i - 1];
+        t <<= d;
+    }
+    // OR with the last coefficient
+    t |= poly.coeffs()[0];
+
+    // Convert to bytes (little-endian) and return
+    let byte_len = 32 * d;  // Calculate the required byte length
+    let mut result = Vec::with_capacity(byte_len);
+    for _ in 0..byte_len {
+        result.push((t & 0xFF) as u8);
+        t >>= 8;
+    }
+    result
+}
+
+/// Encodes a vector of polynomials into a single vector of bytes.
+/// This function uses `encode_polynomial` on each polynomial and concatenates
+/// the resulting byte arrays into one `Vec<u8>`.
+///
+/// # Arguments
+/// * `polys` - A reference to a `Vec<Polynomial<i64>>` that contains the polynomials to be encoded.
+/// * `d` - The bit-width parameter for the encoding process. Typically 12 for some cryptographic algorithms.
+///
+/// # Returns
+/// * `Vec<u8>` - A single vector containing all the encoded polynomials.
+///
+/// # Example
+/// ```
+/// use ml_kem::utils::{generate_polynomial,encode_vec};
+/// let sigma = vec![0u8; 32]; // Example seed
+/// let eta = 3;
+/// let n = 0;
+/// let poly_size = 256;
+/// let (p0, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size);
+/// let (p1, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size);
+/// let polys = vec![p0, p1];
+/// let encoded_bytes = encode_vec(&polys, 12);
+/// assert_eq!(encoded_bytes.len(), 768);  // Total length after encoding two polynomials
+/// ```
+pub fn encode_vec(v: &Vec<Polynomial<i64>>, d: usize) -> Vec<u8> {
+    let mut encoded_bytes = Vec::new();
+    for poly in v {
+        let encoded_poly = encode_poly(poly, d);
+        encoded_bytes.extend(encoded_poly);  // Append each encoded polynomial's bytes
+    }
+    encoded_bytes
+}
+
+/// Applies the Number Theoretic Transform (NTT) to each polynomial in a vector.
+///
+/// This function takes a vector of polynomials, converts their coefficient slices 
+/// into owned `Vec<i64>` values, ensures they have a uniform length of `n` by 
+/// padding with zeros if necessary, and then applies the NTT to each polynomial.
+///
+/// # Arguments
+///
+/// * `v` - A reference to a vector of `Polynomial<i64>`, representing the input polynomials.
+/// * `omega` - The primitive root of unity used for the NTT.
+/// * `n` - The expected number of coefficients in each polynomial.
+/// * `q` - The modulus used for NTT computations.
+///
+/// # Returns
+///
+/// A vector of `Polynomial<i64>` where each polynomial has been transformed using NTT.
+pub fn vec_ntt(v: &Vec<Polynomial<i64>>, omega: i64, n: usize, q: i64) -> Vec<Polynomial<i64>> {
+    v.iter()
+        .map(|poly| {
+            let mut coeffs = poly.coeffs().to_vec(); // Convert slice to Vec<i64>
+            coeffs.resize(n, 0); // Ensure uniform length
+            Polynomial::new(ntt(&coeffs, omega, n, q))
+        })
+        .collect()
 }
