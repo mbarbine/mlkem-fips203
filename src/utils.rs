@@ -36,9 +36,9 @@ pub struct Parameters {
 /// default parameters for module-LWE
 impl Default for Parameters {
     fn default() -> Self {
-        let n = 512;
+        let n = 256;
         let q = 12289;
-        let k = 8;
+        let k = 4;
         let sigma = 3.19;
 		let omega = ntt::omega(q, 2*n);
 		let eta_1 = 3;
@@ -523,8 +523,12 @@ pub fn generate_polynomial(
 /// # Example
 /// ```
 /// use polynomial_ring::Polynomial;
-/// use ml_kem::utils::encode_poly;
-/// let poly = Polynomial::new(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
+/// use ml_kem::utils::{generate_polynomial,encode_poly};
+/// let sigma = vec![0u8; 32]; // Example seed
+/// let eta = 3;
+/// let n = 0;
+/// let poly_size = 256;
+/// let (poly, new_n) = generate_polynomial(sigma, eta, n, poly_size);
 /// let encoded = encode_poly(&poly, 12);
 /// assert_eq!(encoded.len(), 384); // 32 * d (d = 12)
 /// ```
