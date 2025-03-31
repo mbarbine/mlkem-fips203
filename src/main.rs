@@ -21,5 +21,10 @@ fn main() {
     let encoded = encode_poly(&poly, 12);
     println!("encoded_poly = {:?}", encoded);
     assert_eq!(encoded.len(), 384); // 32 * d (d = 12)
+    let (ek_pke, _dk_pke) = mlkem._k_pke_keygen(d);
+
+    let m = vec![0x01, 0x02, 0x03, 0x04];
+    let r = 3.0;
+    mlkem._k_pke_encrypt(ek_pke, m, r);
 
 }
