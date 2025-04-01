@@ -1,20 +1,25 @@
 use ml_kem::ml_kem::MLKEM;
 use ml_kem::utils::Parameters;
-use ml_kem::utils::generate_polynomial;
-use ntt::ntt;
+use ml_kem::utils::{generate_polynomial,encode_poly};
 mod tests;
 
 fn main() {
 
     let params = Parameters::default();
     let mlkem = MLKEM::new(params);
-    let sigma = vec![0u8; 32]; // Example seed
-    let prf_count = 0;
-    let (poly, _prf_count) = generate_polynomial(sigma.clone(), mlkem.params.eta_1, prf_count, mlkem.params.n);
-    let ntt_poly = ntt(poly.coeffs(), mlkem.params.omega, mlkem.params.n, mlkem.params.q);
-    println!("{:?}", ntt_poly);
 
     let d = vec![0x01, 0x02, 0x03, 0x04];
     let (_ek_pke, _dk_pke) = mlkem._k_pke_keygen(d);
+    
+    let sigma = vec![0u8; 32]; // Example seed
+    let eta = 3;
+    let n = 0;
+    let poly_size = 256;
+    let (poly, _n) = generate_polynomial(sigma, eta, n, poly_size, None);
+    println!("{:?}", poly);
+
+    let encoded = encode_poly(&poly, 12);
+    println!("encoded_poly = {:?}", encoded);
+    assert_eq!(encoded.len(), 384); // 32 * d (d = 12)
 
 }

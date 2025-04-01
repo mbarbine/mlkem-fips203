@@ -7,6 +7,9 @@ use rs_shake256::Shake256Hasher;
 use getrandom::getrandom;
 use aes_ctr_drbg::DrbgCtx;
 use ntt::ntt;
+use num_bigint::BigUint;
+use num_traits::Zero;
+
 
 /// default parameters for module-LWE
 pub struct Parameters {
@@ -487,7 +490,7 @@ pub fn generate_error_vector(
 /// let n = 0;
 /// let poly_size = 256;
 ///
-/// let (poly, new_n) = generate_polynomial(sigma, eta, n, poly_size);
+/// let (poly, new_n) = generate_polynomial(sigma, eta, n, poly_size, None);
 ///
 /// assert_eq!(new_n, 1);
 /// assert_eq!(poly.coeffs().len(), poly_size);
@@ -503,10 +506,19 @@ pub fn generate_polynomial(
     sigma: Vec<u8>,
     eta: usize,
     n: u8,
-    poly_size: usize
+    poly_size: usize,
+    q: Option<i64>,
 ) -> (Polynomial<i64>, u8) {
-    let prf_output = prf_3(sigma, n);
-    let poly = cbd(prf_output, eta, poly_size);
+    let prf_output = prf_3(sigma, n); // get the prf bytes
+    let poly = cbd(prf_output, eta, poly_size); // form the polynomial array from a centered binomial dist.
+    if let Some(q) = q {
+        let coeffs = poly.coeffs();
+        let mut mod_coeffs = vec![];
+        for i in 0..coeffs.len() {
+            mod_coeffs.push(coeffs[i].rem_euclid(q));
+        }
+        return (Polynomial::new(mod_coeffs), n + 1);
+    }
     (poly, n + 1)
 }
 
@@ -529,29 +541,27 @@ pub fn generate_polynomial(
 /// let eta = 3;
 /// let n = 0;
 /// let poly_size = 256;
-/// let (poly, new_n) = generate_polynomial(sigma, eta, n, poly_size);
+/// let (poly, new_n) = generate_polynomial(sigma, eta, n, poly_size, None);
 /// let encoded = encode_poly(&poly, 12);
 /// assert_eq!(encoded.len(), 384); // 32 * d (d = 12)
 /// ```
 pub fn encode_poly(poly: &Polynomial<i64>, d: usize) -> Vec<u8> {
-    let mut t: i64 = 0;
+    let mut t = BigUint::zero(); // Start with a BigUint initialized to zero
 
-    // Loop through all 255 coefficients
     for i in 0..255 {
-        // Shift t and OR with the current coefficient
-        t |= poly.coeffs()[256 - i - 1];
-        t <<= d;
+        // Left shift by d bits and then OR the current coefficient
+        t <<= d; // Equivalent to t = t * 2^d
+        t |= BigUint::from(poly.coeffs()[256 - i - 1] as u64); // Use BigUint for coefficients
     }
-    // OR with the last coefficient
-    t |= poly.coeffs()[0];
 
-    // Convert to bytes (little-endian) and return
-    let byte_len = 32 * d;  // Calculate the required byte length
-    let mut result = Vec::with_capacity(byte_len);
-    for _ in 0..byte_len {
-        result.push((t & 0xFF) as u8);
-        t >>= 8;
-    }
+    // Add the last coefficient
+    t |= BigUint::from(poly.coeffs()[0] as u64);
+
+    // Convert BigUint to a byte vector
+    let byte_len = 32 * d;
+    let mut result = t.to_bytes_le(); // Convert to little-endian bytes
+    result.resize(byte_len, 0); // Ensure the result is exactly `32 * d` bytes
+
     result
 }
 
@@ -573,8 +583,8 @@ pub fn encode_poly(poly: &Polynomial<i64>, d: usize) -> Vec<u8> {
 /// let eta = 3;
 /// let n = 0;
 /// let poly_size = 256;
-/// let (p0, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size);
-/// let (p1, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size);
+/// let (p0, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, None);
+/// let (p1, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, None);
 /// let polys = vec![p0, p1];
 /// let encoded_bytes = encode_vec(&polys, 12);
 /// assert_eq!(encoded_bytes.len(), 768);  // Total length after encoding two polynomials
@@ -586,6 +596,15 @@ pub fn encode_vec(v: &Vec<Polynomial<i64>>, d: usize) -> Vec<u8> {
         encoded_bytes.extend(encoded_poly);  // Append each encoded polynomial's bytes
     }
     encoded_bytes
+}
+
+/// placeholder decode vec function
+pub fn decode_vec(_encoded: &Vec<u8>, _k: usize, _d: usize, _from_ntt: bool) -> Vec<Polynomial<i64>> {
+    // Placeholder implementation
+    // Decode the vector and return a Vec of Polynomials.
+    // This function should return a Vec<Polynomial<i64>> after decoding the input `encoded` data.
+    
+    Vec::new()  // Placeholder for now
 }
 
 /// Applies the Number Theoretic Transform (NTT) to each polynomial in a vector.
