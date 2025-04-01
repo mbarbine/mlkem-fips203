@@ -6,7 +6,7 @@ use rs_shake128::Shake128Hasher;
 use rs_shake256::Shake256Hasher;
 use getrandom::getrandom;
 use aes_ctr_drbg::DrbgCtx;
-use ntt::ntt;
+use ntt::{ntt,intt};
 use num_bigint::BigUint;
 use num_traits::Zero;
 
@@ -436,31 +436,38 @@ pub fn cbd(input_bytes: Vec<u8>, eta: usize, n:usize) -> Polynomial<i64> {
 /// ```
 /// use ml_kem::utils::generate_error_vector;
 /// let sigma = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20, 0x21, 0x22];
-/// let eta = 24;
-/// let n = 0x01;
+/// let eta = 3;
+/// let b = 0x01;
 /// let k = 3;
-/// let poly_size = 32;
-/// let (v,n) = generate_error_vector(sigma,eta,n,k,poly_size);
+/// let poly_size = 256;
+/// let (v,n) = generate_error_vector(sigma,eta,b,k,poly_size);
 /// assert_eq!(v.len(),3);
 /// ```
 pub fn generate_error_vector(
     sigma: Vec<u8>,
     eta: usize,
-    n: u8,
+    b: u8,
     k: usize,
-    poly_size: usize
+    poly_size: usize,
 ) -> (Vec<Polynomial<i64>>, u8) {
     let mut elements = vec![Polynomial::new(vec![]); k];
-    let mut current_n = n;
+    let mut current_b = b;
 
     for i in 0..k {
-        let prf_output = prf_3(sigma.clone(), current_n);
-		assert_eq!(eta*poly_size/4, prf_output.len(), "eta*poly_size/4 must be 192 (prf output length)");
+        let prf_output: Vec<u8>;
+        if eta == 2 {
+            prf_output = prf_2(sigma.clone(), current_b);
+        } else if eta == 3 {
+            prf_output = prf_3(sigma.clone(), current_b);
+        } else {
+            panic!("eta must be 2 or 3"); // Handle invalid eta values
+        }
+		assert_eq!(eta*poly_size/4, prf_output.len(), "eta*poly_size/4 must be 128 or 192 (prf output length)");
         elements[i] = cbd(prf_output, eta, poly_size);
-        current_n += 1;
+        current_b += 1;
     }
 
-    (elements, current_n)
+    (elements, current_b)
 }
 
 /// Generates a polynomial sampled from the Centered Binomial Distribution (CBD).
@@ -505,21 +512,30 @@ pub fn generate_error_vector(
 pub fn generate_polynomial(
     sigma: Vec<u8>,
     eta: usize,
-    n: u8,
+    b: u8,
     poly_size: usize,
     q: Option<i64>,
 ) -> (Polynomial<i64>, u8) {
-    let prf_output = prf_3(sigma, n); // get the prf bytes
+    // get the prf_output depending on eta = 2, or eta = 3
+    let prf_output: Vec<u8>;
+    if eta == 2 {
+        prf_output = prf_2(sigma, b);
+    } else if eta == 3 {
+        prf_output = prf_3(sigma, b);
+    } else {
+        panic!("eta must be 2 or 3"); // Handle invalid eta values
+    }
     let poly = cbd(prf_output, eta, poly_size); // form the polynomial array from a centered binomial dist.
+    //if a modulus is set, place coeffs in [0,q-1]
     if let Some(q) = q {
         let coeffs = poly.coeffs();
         let mut mod_coeffs = vec![];
         for i in 0..coeffs.len() {
             mod_coeffs.push(coeffs[i].rem_euclid(q));
         }
-        return (Polynomial::new(mod_coeffs), n + 1);
+        return (Polynomial::new(mod_coeffs), b + 1);
     }
-    (poly, n + 1)
+    (poly, b + 1)
 }
 
 /// Encodes a polynomial into a byte vector based on the FIPS 203 standard (Algorithm 3, inverse).
@@ -563,32 +579,6 @@ pub fn encode_poly(poly: &Polynomial<i64>, d: usize) -> Vec<u8> {
     result.resize(byte_len, 0); // Ensure the result is exactly `32 * d` bytes
 
     result
-}
-
-/// Applies the Number Theoretic Transform (NTT) to each polynomial in a vector.
-///
-/// This function takes a vector of polynomials, converts their coefficient slices 
-/// into owned `Vec<i64>` values, ensures they have a uniform length of `n` by 
-/// padding with zeros if necessary, and then applies the NTT to each polynomial.
-///
-/// # Arguments
-///
-/// * `v` - A reference to a vector of `Polynomial<i64>`, representing the input polynomials.
-/// * `omega` - The primitive root of unity used for the NTT.
-/// * `n` - The expected number of coefficients in each polynomial.
-/// * `q` - The modulus used for NTT computations.
-///
-/// # Returns
-///
-/// A vector of `Polynomial<i64>` where each polynomial has been transformed using NTT.
-pub fn vec_ntt(v: &Vec<Polynomial<i64>>, omega: i64, n: usize, q: i64) -> Vec<Polynomial<i64>> {
-    v.iter()
-        .map(|poly| {
-            let mut coeffs = poly.coeffs().to_vec(); // Convert slice to Vec<i64>
-            coeffs.resize(n, 0); // Ensure uniform length
-            Polynomial::new(ntt(&coeffs, omega, n, q))
-        })
-        .collect()
 }
 
 /// Decodes a byte vector into a polynomial based on the FIPS 203 standard (Algorithm 3).
@@ -685,10 +675,10 @@ pub fn encode_vector(v: &Vec<Polynomial<i64>>, d: usize) -> Vec<u8> {
 /// let (p1, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, Some(3329));
 /// let polys = vec![p0, p1];
 /// let encoded_bytes = encode_vector(&polys, 12);
-/// let decoded = decode_vector(encoded_bytes, 2, 12, false);
+/// let decoded = decode_vector(&encoded_bytes, 2, 12, false);
 /// assert_eq!(polys, decoded);
 /// ```
-pub fn decode_vector(input_bytes: Vec<u8>, k: usize, d: usize, _from_ntt: bool) -> Vec<Polynomial<i64>> {
+pub fn decode_vector(input_bytes: &Vec<u8>, k: usize, d: usize, _from_ntt: bool) -> Vec<Polynomial<i64>> {
 	assert_eq!(256*d*k, input_bytes.len()*8, "256*d*k must be length of input bytes times 8");	
 	let mut v = vec![Polynomial::new(vec![]); k];
 	for i in 0..k {
@@ -706,7 +696,7 @@ pub fn decode_vector(input_bytes: Vec<u8>, k: usize, d: usize, _from_ntt: bool) 
 ///
 /// # Returns
 /// * `i64` - compressed integer
-fn compress_ele(x: i64, d: u32) -> i64 {
+fn compress_ele(x: i64, d: usize) -> i64 {
     let t = 1 << d;
     let y = (t * x + 1664) / 3329; // n.b. 1664 = 3329 / 2
     y % t
@@ -721,7 +711,7 @@ fn compress_ele(x: i64, d: u32) -> i64 {
 ///
 /// # Returns
 /// * `i64` - compressed integer
-fn decompress_ele(x: i64, d: u32) -> i64 {
+fn decompress_ele(x: i64, d: usize) -> i64 {
     let t = 1 << (d - 1);
     (3329 * x + t) >> d
 }
@@ -749,10 +739,29 @@ fn decompress_ele(x: i64, d: u32) -> i64 {
 ///
 /// # Notes
 /// - This is lossy compression
-pub fn compress_poly(poly: &Polynomial<i64>, d: u32) -> Polynomial<i64> {
+pub fn compress_poly(poly: &Polynomial<i64>, d: usize) -> Polynomial<i64> {
     let compressed_coeffs: Vec<i64> = poly.coeffs().iter().map(|&c| compress_ele(c, d)).collect();
     Polynomial::new(compressed_coeffs)
 }
+
+/// compress each polynomial in a vector of polynomials
+///
+/// # Example
+/// ```
+/// use ml_kem::utils::{generate_polynomial,compress_vec};
+/// let sigma = vec![0u8; 32];
+/// let eta = 3;
+/// let n = 0;
+/// let poly_size = 256;
+/// let (p0, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, Some(3329));
+/// let (p1, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, Some(3329));
+/// let v = vec![p0, p1];
+/// compress_vec(&v, 12);
+/// ```
+pub fn compress_vec(v: &Vec<Polynomial<i64>>, d: usize) -> Vec<Polynomial<i64>> {
+    v.iter().map(|poly| compress_poly(poly, d)).collect()
+}
+
 
 /// Decompress the polynomial by decompressing each coefficient
 /// 
@@ -781,7 +790,159 @@ pub fn compress_poly(poly: &Polynomial<i64>, d: u32) -> Polynomial<i64> {
 /// - This as compression is lossy, we have
 /// x' = decompress(compress(x)), which x' != x, but is
 /// close in magnitude.
-pub fn decompress_poly(poly: &Polynomial<i64>, d: u32) -> Polynomial<i64> {
+pub fn decompress_poly(poly: &Polynomial<i64>, d: usize) -> Polynomial<i64> {
     let decompressed_coeffs: Vec<i64> = poly.coeffs().iter().map(|&c| decompress_ele(c, d)).collect();
     Polynomial::new(decompressed_coeffs)
+}
+
+/// Applies the Number Theoretic Transform (NTT) to each polynomial in a vector.
+///
+/// This function takes a vector of polynomials, converts their coefficient slices 
+/// into owned `Vec<i64>` values, ensures they have a uniform length of `n` by 
+/// padding with zeros if necessary, and then applies the NTT to each polynomial.
+///
+/// # Arguments
+///
+/// * `v` - A reference to a vector of `Polynomial<i64>`, representing the input polynomials.
+/// * `omega` - The primitive root of unity used for the NTT.
+/// * `n` - The expected number of coefficients in each polynomial.
+/// * `q` - The modulus used for NTT computations.
+///
+/// # Returns
+///
+/// A vector of `Polynomial<i64>` where each polynomial has been transformed using NTT.
+///
+/// # Example
+/// ```
+/// use ml_kem::utils::{generate_polynomial, vec_ntt};
+/// let sigma = vec![0u8; 32];
+/// let eta = 3;
+/// let b = 0;
+/// let n = 256;
+/// let q = 12289;
+/// let omega = ntt::omega(q, 2*n);
+/// let (p0, _b) = generate_polynomial(sigma.clone(), eta, b, n, Some(q));
+/// let (p1, _b) = generate_polynomial(sigma.clone(), eta, b, n, Some(q));
+/// let v = vec![p0, p1];
+/// vec_ntt(&v, omega, n, q);
+/// ```
+pub fn vec_ntt(v: &Vec<Polynomial<i64>>, omega: i64, n: usize, q: i64) -> Vec<Polynomial<i64>> {
+    v.iter()
+        .map(|poly| {
+            let mut coeffs = poly.coeffs().to_vec(); // Convert slice to Vec<i64>
+            coeffs.resize(n, 0); // Ensure uniform length
+            Polynomial::new(ntt(&coeffs, omega, n, q))
+        })
+        .collect()
+}
+
+/// Applies the inverse Number Theoretic Transform (iNTT) to each polynomial in a vector.
+///
+/// This function takes a vector of polynomials, converts their coefficient slices 
+/// into owned `Vec<i64>` values, ensures they have a uniform length of `n` by 
+/// padding with zeros if necessary, and then applies the NTT to each polynomial.
+///
+/// # Arguments
+///
+/// * `v` - A reference to a vector of `Polynomial<i64>`, representing the input polynomials.
+/// * `omega` - The primitive root of unity used for the NTT.
+/// * `n` - The expected number of coefficients in each polynomial.
+/// * `q` - The modulus used for NTT computations.
+///
+/// # Returns
+///
+/// A vector of `Polynomial<i64>` where each polynomial has been transformed using NTT.
+///
+/// # Example
+/// ```
+/// use ml_kem::utils::{generate_polynomial, vec_ntt, vec_intt};
+/// let sigma = vec![0u8; 32];
+/// let eta = 3;
+/// let b = 0;
+/// let n = 256;
+/// let q = 12289;
+/// let omega = ntt::omega(q, 2*n);
+/// let (p0, _b) = generate_polynomial(sigma.clone(), eta, b, n, Some(q));
+/// let (p1, _b) = generate_polynomial(sigma.clone(), eta, b, n, Some(q));
+/// let v = vec![p0, p1];
+/// let v_ntt = vec_ntt(&v, omega, n, q);
+/// let v_recovered = vec_intt(&v_ntt, omega, n, q);
+/// assert_eq!(v, v_recovered);
+/// ```
+pub fn vec_intt(v: &Vec<Polynomial<i64>>, omega: i64, n: usize, q: i64) -> Vec<Polynomial<i64>> {
+    v.iter()
+        .map(|poly| {
+            let mut coeffs = poly.coeffs().to_vec(); // Convert slice to Vec<i64>
+            coeffs.resize(n, 0); // Ensure uniform length
+            Polynomial::new(intt(&coeffs, omega, n, q))
+        })
+        .collect()
+}
+
+/// Computes the Number Theoretic Transform (NTT) of a polynomial in Z_q[x]/(x^n+1).
+///
+/// The NTT is a specialized version of the Discrete Fourier Transform (DFT) 
+/// that operates in a finite field. It is used to accelerate polynomial 
+/// multiplication in cryptographic schemes.
+///
+/// # Arguments
+/// * `poly` - A reference to the input polynomial.
+/// * `omega` - A primitive `n`th root of unity modulo `q`.
+/// * `n` - The polynomial ring degree.
+/// * `q` - The modulus used for coefficient reduction.
+///
+/// # Returns
+/// * A new `Polynomial<i64>` representing the NTT-transformed coefficients.
+///
+/// # Examples
+/// ```
+/// use ml_kem::utils::{generate_polynomial, poly_ntt};
+/// let sigma = vec![0u8; 32];
+/// let eta = 3;
+/// let b = 0;
+/// let n = 256;
+/// let q = 12289;
+/// let omega = ntt::omega(q, 2*n);
+/// let (poly, _b) = generate_polynomial(sigma.clone(), eta, b, n, Some(q));
+/// poly_ntt(&poly, omega, n, q);
+/// ```
+pub fn poly_ntt(poly: &Polynomial<i64>, omega: i64, n: usize, q: i64) -> Polynomial<i64> {
+    let mut coeffs = poly.coeffs().to_vec(); // Convert slice to Vec<i64>
+    coeffs.resize(n, 0); // Ensure uniform length
+    Polynomial::new(ntt(&coeffs, omega, n, q))
+}
+
+/// Computes the inverse Number Theoretic Transform (INTT) of a polynomial in Z_q[x]/(x^n+1).
+///
+/// The INTT reverses the NTT operation, recovering the original polynomial 
+/// coefficients after an NTT transformation and pointwise multiplication. 
+/// This is crucial for polynomial multiplication in NTT-based cryptographic protocols.
+///
+/// # Arguments
+/// * `poly` - A reference to the input polynomial in the NTT domain.
+/// * `omega` - A primitive `n`th root of unity modulo `q`.
+/// * `n` - The polynomial ring degree.
+/// * `q` - The modulus used for coefficient reduction.
+///
+/// # Returns
+/// * A new `Polynomial<i64>` representing the inverse-transformed coefficients.
+///
+/// # Examples
+/// ```
+/// use ml_kem::utils::{generate_polynomial, poly_ntt, poly_intt};
+/// let sigma = vec![0u8; 32];
+/// let eta = 3;
+/// let b = 0;
+/// let n = 256;
+/// let q = 12289;
+/// let omega = ntt::omega(q, 2*n);
+/// let (poly, _b) = generate_polynomial(sigma.clone(), eta, b, n, Some(q));
+/// let poly_transformed = poly_ntt(&poly, omega, n, q);
+/// let poly_recovered = poly_intt(&poly_transformed, omega, n, q);
+/// assert_eq!(poly, poly_recovered);
+/// ```
+pub fn poly_intt(poly: &Polynomial<i64>, omega: i64, n: usize, q: i64) -> Polynomial<i64> {
+    let mut coeffs = poly.coeffs().to_vec(); // Convert slice to Vec<i64>
+    coeffs.resize(n, 0); // Ensure uniform length
+    Polynomial::new(intt(&coeffs, omega, n, q))
 }
