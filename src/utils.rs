@@ -597,15 +597,17 @@ pub fn generate_polynomial(
 /// ```
 pub fn encode_poly(poly: &Polynomial<i64>, d: usize) -> Vec<u8> {
     let mut t = BigUint::zero(); // Start with a BigUint initialized to zero
+    let mut coeffs = poly.coeffs().to_vec(); // get the coefficients of the polynomial
+    coeffs.resize(256, 0); // ensure they're the right size
 
     for i in 0..255 {
         // OR the current coefficient then left shift by d bits
-        t |= BigUint::from(poly.coeffs()[256 - i - 1] as u64); // Use BigUint for coefficients
+        t |= BigUint::from(coeffs[256 - i - 1] as u64); // Use BigUint for coefficients
         t <<= d; // Equivalent to t = t * 2^d
     }
 
     // Add the last coefficient
-    t |= BigUint::from(poly.coeffs()[0] as u64);
+    t |= BigUint::from(coeffs[0] as u64);
 
     // Convert BigUint to a byte vector
     let byte_len = 32 * d;

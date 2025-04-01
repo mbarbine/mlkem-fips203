@@ -230,7 +230,7 @@ impl MLKEM {
     /// let (m_poly, _n) = generate_polynomial(sigma, eta, n, poly_size, None);
     /// let m = encode_poly(&m_poly,1);
     /// let r = vec![0x01, 0x02, 0x03, 0x04];
-    /// let k_pke_encrypt_output = mlkem._k_pke_encrypt(ek_pke, m, r);
+    /// let c = mlkem._k_pke_encrypt(ek_pke, m, r);
     /// ```
     ///
     /// # Panics
@@ -311,8 +311,27 @@ impl MLKEM {
     /// * `c` - ciphertext as encoded vector, encoded polynomial
     ///
     /// # Returns
+    /// * `m` - message as compressed and encoded polynomial
     ///
-    /// 
+    /// # Examples
+    /// ```
+    /// use ml_kem::ml_kem::MLKEM;
+    /// use ml_kem::utils::{Parameters,encode_poly,generate_polynomial};
+    /// let params = Parameters::default();
+    /// let mlkem = MLKEM::new(params);
+    /// let d = vec![0x01, 0x02, 0x03, 0x04];
+    /// let (ek_pke, dk_pke) = mlkem._k_pke_keygen(d);
+    /// let sigma = vec![0u8; 32];
+    /// let eta = 3;
+    /// let n = 0;
+    /// let poly_size = 256;
+    /// let (m_poly, _n) = generate_polynomial(sigma, eta, n, poly_size, None);
+    /// let m = encode_poly(&m_poly,1);
+    /// let r = vec![0x01, 0x02, 0x03, 0x04];
+    /// let c = mlkem._k_pke_encrypt(ek_pke, m.clone(), r);
+    /// let m_dec = mlkem._k_pke_decrypt(dk_pke, c);
+    /// assert_eq!(m, m_dec);
+    /// ```
     pub fn _k_pke_decrypt(&self, dk_pke: Vec<u8>, c: Vec<u8> ) -> Vec<u8> {
 
         // encoded size
