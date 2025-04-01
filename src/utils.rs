@@ -421,6 +421,7 @@ pub fn bytes_to_bits(bytes: Vec<u8>) -> Vec<u8> {
 }
 
 /// Generates a polynomial from bytes via the centered binomial distribution
+/// following Algorithm 6 of FIPS 203.
 /// 
 /// # Arguments
 /// 
