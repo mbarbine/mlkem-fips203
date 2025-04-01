@@ -6,7 +6,7 @@ use rs_shake128::Shake128Hasher;
 use rs_shake256::Shake256Hasher;
 use getrandom::getrandom;
 use aes_ctr_drbg::DrbgCtx;
-use ntt::ntt;
+use ntt::{ntt,intt};
 use num_bigint::BigUint;
 use num_traits::Zero;
 
@@ -505,11 +505,11 @@ pub fn generate_error_vector(
 pub fn generate_polynomial(
     sigma: Vec<u8>,
     eta: usize,
-    n: u8,
+    b: u8,
     poly_size: usize,
     q: Option<i64>,
 ) -> (Polynomial<i64>, u8) {
-    let prf_output = prf_3(sigma, n); // get the prf bytes
+    let prf_output = prf_3(sigma, b); // get the prf bytes
     let poly = cbd(prf_output, eta, poly_size); // form the polynomial array from a centered binomial dist.
     if let Some(q) = q {
         let coeffs = poly.coeffs();
@@ -517,9 +517,9 @@ pub fn generate_polynomial(
         for i in 0..coeffs.len() {
             mod_coeffs.push(coeffs[i].rem_euclid(q));
         }
-        return (Polynomial::new(mod_coeffs), n + 1);
+        return (Polynomial::new(mod_coeffs), b + 1);
     }
-    (poly, n + 1)
+    (poly, b + 1)
 }
 
 /// Encodes a polynomial into a byte vector based on the FIPS 203 standard (Algorithm 3, inverse).
@@ -795,12 +795,70 @@ pub fn decompress_poly(poly: &Polynomial<i64>, d: usize) -> Polynomial<i64> {
 /// # Returns
 ///
 /// A vector of `Polynomial<i64>` where each polynomial has been transformed using NTT.
+///
+/// # Example
+/// ```
+/// use ml_kem::utils::{generate_polynomial, vec_ntt};
+/// let sigma = vec![0u8; 32];
+/// let eta = 3;
+/// let b = 0;
+/// let n = 256;
+/// let q = 12289;
+/// let omega = ntt::omega(q, 2*n);
+/// let (p0, _b) = generate_polynomial(sigma.clone(), eta, b, n, Some(q));
+/// let (p1, _b) = generate_polynomial(sigma.clone(), eta, b, n, Some(q));
+/// let v = vec![p0, p1];
+/// vec_ntt(&v, omega, n, q);
+/// ```
 pub fn vec_ntt(v: &Vec<Polynomial<i64>>, omega: i64, n: usize, q: i64) -> Vec<Polynomial<i64>> {
     v.iter()
         .map(|poly| {
             let mut coeffs = poly.coeffs().to_vec(); // Convert slice to Vec<i64>
             coeffs.resize(n, 0); // Ensure uniform length
             Polynomial::new(ntt(&coeffs, omega, n, q))
+        })
+        .collect()
+}
+
+/// Applies the inverse Number Theoretic Transform (iNTT) to each polynomial in a vector.
+///
+/// This function takes a vector of polynomials, converts their coefficient slices 
+/// into owned `Vec<i64>` values, ensures they have a uniform length of `n` by 
+/// padding with zeros if necessary, and then applies the NTT to each polynomial.
+///
+/// # Arguments
+///
+/// * `v` - A reference to a vector of `Polynomial<i64>`, representing the input polynomials.
+/// * `omega` - The primitive root of unity used for the NTT.
+/// * `n` - The expected number of coefficients in each polynomial.
+/// * `q` - The modulus used for NTT computations.
+///
+/// # Returns
+///
+/// A vector of `Polynomial<i64>` where each polynomial has been transformed using NTT.
+///
+/// # Example
+/// ```
+/// use ml_kem::utils::{generate_polynomial, vec_ntt, vec_intt};
+/// let sigma = vec![0u8; 32];
+/// let eta = 3;
+/// let b = 0;
+/// let n = 256;
+/// let q = 12289;
+/// let omega = ntt::omega(q, 2*n);
+/// let (p0, _b) = generate_polynomial(sigma.clone(), eta, b, n, Some(q));
+/// let (p1, _b) = generate_polynomial(sigma.clone(), eta, b, n, Some(q));
+/// let v = vec![p0, p1];
+/// let v_ntt = vec_ntt(&v, omega, n, q);
+/// let v_recovered = vec_intt(&v_ntt, omega, n, q);
+/// assert_eq!(v, v_recovered);
+/// ```
+pub fn vec_intt(v: &Vec<Polynomial<i64>>, omega: i64, n: usize, q: i64) -> Vec<Polynomial<i64>> {
+    v.iter()
+        .map(|poly| {
+            let mut coeffs = poly.coeffs().to_vec(); // Convert slice to Vec<i64>
+            coeffs.resize(n, 0); // Ensure uniform length
+            Polynomial::new(intt(&coeffs, omega, n, q))
         })
         .collect()
 }

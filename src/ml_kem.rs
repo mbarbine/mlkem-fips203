@@ -266,7 +266,7 @@ impl MLKEM {
         /*
 
         // compute u = a_hat.T * y_hat + e1
-        let a_hat_t_dot_y_hat = from_ntt(mul_mat_vec_simple(&a_hat_t, &y_hat, self.params.q, &self.params.f, self.params.omega));
+        let a_hat_t_y_hat = from_ntt(mul_mat_vec_simple(&a_hat_t, &y_hat, self.params.q, &self.params.f, self.params.omega));
         let u = add_vec(&a_hat_t_dot_y_hat, &e1, self.params.q, &self.params.f);
 
         //decode the polynomial mu from the bytes m
