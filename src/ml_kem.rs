@@ -1,4 +1,4 @@
-use crate::utils::{Parameters, hash_h, hash_g, generate_matrix_from_seed, generate_error_vector, encode_vec, vec_ntt};
+use crate::utils::{Parameters, hash_h, hash_g, generate_matrix_from_seed, generate_error_vector, encode_vector, vec_ntt};
 use module_lwe::utils::{gen_uniform_matrix,mul_mat_vec_simple,gen_small_vector,add_vec};
 use module_lwe::encrypt::encrypt;
 use module_lwe::decrypt::decrypt;
@@ -187,9 +187,9 @@ impl MLKEM {
         let t_hat = add_vec(&mul_mat_vec_simple(&a_hat, &s_hat, self.params.q, &self.params.f, self.params.omega), &e_hat, self.params.q, &self.params.f);
 
         // Encode the keys
-        let mut ek_pke = encode_vec(&t_hat, 12); // Encoding vec of polynomials to bytes
+        let mut ek_pke = encode_vector(&t_hat, 12); // Encoding vec of polynomials to bytes
         ek_pke.extend_from_slice(&rho); // append rho, output of hash function
-        let dk_pke = encode_vec(&s_hat, 12); // Encoding s_hat for dk_pke
+        let dk_pke = encode_vector(&s_hat, 12); // Encoding s_hat for dk_pke
 
         (ek_pke, dk_pke)
     }

@@ -565,48 +565,6 @@ pub fn encode_poly(poly: &Polynomial<i64>, d: usize) -> Vec<u8> {
     result
 }
 
-/// Encodes a vector of polynomials into a single vector of bytes.
-/// This function uses `encode_polynomial` on each polynomial and concatenates
-/// the resulting byte arrays into one `Vec<u8>`.
-///
-/// # Arguments
-/// * `polys` - A reference to a `Vec<Polynomial<i64>>` that contains the polynomials to be encoded.
-/// * `d` - The bit-width parameter for the encoding process. Typically 12 for some cryptographic algorithms.
-///
-/// # Returns
-/// * `Vec<u8>` - A single vector containing all the encoded polynomials.
-///
-/// # Example
-/// ```
-/// use ml_kem::utils::{generate_polynomial,encode_vec};
-/// let sigma = vec![0u8; 32]; // Example seed
-/// let eta = 3;
-/// let n = 0;
-/// let poly_size = 256;
-/// let (p0, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, None);
-/// let (p1, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, None);
-/// let polys = vec![p0, p1];
-/// let encoded_bytes = encode_vec(&polys, 12);
-/// assert_eq!(encoded_bytes.len(), 768);  // Total length after encoding two polynomials
-/// ```
-pub fn encode_vec(v: &Vec<Polynomial<i64>>, d: usize) -> Vec<u8> {
-    let mut encoded_bytes = Vec::new();
-    for poly in v {
-        let encoded_poly = encode_poly(poly, d);
-        encoded_bytes.extend(encoded_poly);  // Append each encoded polynomial's bytes
-    }
-    encoded_bytes
-}
-
-/// placeholder decode vec function
-pub fn decode_vec(_encoded: &Vec<u8>, _k: usize, _d: usize, _from_ntt: bool) -> Vec<Polynomial<i64>> {
-    // Placeholder implementation
-    // Decode the vector and return a Vec of Polynomials.
-    // This function should return a Vec<Polynomial<i64>> after decoding the input `encoded` data.
-    
-    Vec::new()  // Placeholder for now
-}
-
 /// Applies the Number Theoretic Transform (NTT) to each polynomial in a vector.
 ///
 /// This function takes a vector of polynomials, converts their coefficient slices 
@@ -650,7 +608,7 @@ pub fn vec_ntt(v: &Vec<Polynomial<i64>>, omega: i64, n: usize, q: i64) -> Vec<Po
 /// let eta = 3;
 /// let n = 0;
 /// let poly_size = 256;
-/// let (poly, new_n) = generate_polynomial(sigma, eta, n, poly_size);
+/// let (poly, new_n) = generate_polynomial(sigma, eta, n, poly_size, None);
 /// let encoded = encode_poly(&poly, 12);
 /// let decoded = decode_poly(encoded, 12);
 /// assert_eq!(poly, decoded);
@@ -674,6 +632,39 @@ pub fn decode_poly(input_bytes: Vec<u8>, d: usize) -> Polynomial<i64> {
 	Polynomial::new(coeffs)
 }
 
+/// Encodes a vector of polynomials into a single vector of bytes.
+/// This function uses `encode_polynomial` on each polynomial and concatenates
+/// the resulting byte arrays into one `Vec<u8>`.
+///
+/// # Arguments
+/// * `polys` - A reference to a `Vec<Polynomial<i64>>` that contains the polynomials to be encoded.
+/// * `d` - The bit-width parameter for the encoding process. Typically 12 for some cryptographic algorithms.
+///
+/// # Returns
+/// * `Vec<u8>` - A single vector containing all the encoded polynomials.
+///
+/// # Example
+/// ```
+/// use ml_kem::utils::{generate_polynomial,encode_vector};
+/// let sigma = vec![0u8; 32]; // Example seed
+/// let eta = 3;
+/// let n = 0;
+/// let poly_size = 256;
+/// let (p0, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, None);
+/// let (p1, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, None);
+/// let polys = vec![p0, p1];
+/// let encoded_bytes = encode_vector(&polys, 12);
+/// assert_eq!(encoded_bytes.len(), 768);  // Total length after encoding two polynomials
+/// ```
+pub fn encode_vector(v: &Vec<Polynomial<i64>>, d: usize) -> Vec<u8> {
+    let mut encoded_bytes = Vec::new();
+    for poly in v {
+        let encoded_poly = encode_poly(poly, d);
+        encoded_bytes.extend(encoded_poly);  // Append each encoded polynomial's bytes
+    }
+    encoded_bytes
+}
+
 /// Decodes a byte vector into a vector of polynomials.
 ///
 /// # Arguments
@@ -685,19 +676,19 @@ pub fn decode_poly(input_bytes: Vec<u8>, d: usize) -> Polynomial<i64> {
 ///
 /// # Example
 /// ```
-/// use ml_kem::utils::{generate_polynomial,encode_vec,decode_vector};
+/// use ml_kem::utils::{generate_polynomial,encode_vector,decode_vector};
 /// let sigma = vec![0u8; 32]; // Example seed
 /// let eta = 3;
 /// let n = 0;
 /// let poly_size = 256;
-/// let (p0, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size);
-/// let (p1, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size);
+/// let (p0, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, None);
+/// let (p1, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, None);
 /// let polys = vec![p0, p1];
-/// let encoded_bytes = encode_vec(&polys, 12);
-/// let decoded = decode_vector(encoded_bytes, 2, 12);
+/// let encoded_bytes = encode_vector(&polys, 12);
+/// let decoded = decode_vector(encoded_bytes, 2, 12, false);
 /// assert_eq!(polys, decoded);
 /// ```
-pub fn decode_vector(input_bytes: Vec<u8>, k: usize, d: usize) -> Vec<Polynomial<i64>> {
+pub fn decode_vector(input_bytes: Vec<u8>, k: usize, d: usize, _from_ntt: bool) -> Vec<Polynomial<i64>> {
 	assert_eq!(256*d*k, input_bytes.len()*8, "256*d*k must be length of input bytes times 8");	
 	let mut v = vec![Polynomial::new(vec![]); k];
 	for i in 0..k {
