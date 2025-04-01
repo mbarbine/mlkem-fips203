@@ -9,7 +9,7 @@ fn main() {
     let mlkem = MLKEM::new(params);
 
     let d = vec![0x01, 0x02, 0x03, 0x04];
-    let (_ek_pke, _dk_pke) = mlkem._k_pke_keygen(d);
+    let (_ek_pke, _dk_pke) = mlkem._k_pke_keygen(d.clone());
     
     let sigma = vec![0u8; 32]; // Example seed
     let eta = 3;

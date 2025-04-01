@@ -728,6 +728,25 @@ pub fn compress_poly(poly: &Polynomial<i64>, d: usize) -> Polynomial<i64> {
     Polynomial::new(compressed_coeffs)
 }
 
+/// compress each polynomial in a vector of polynomials
+///
+/// # Example
+/// ```
+/// use ml_kem::utils::{generate_polynomial,compress_vec};
+/// let sigma = vec![0u8; 32];
+/// let eta = 3;
+/// let n = 0;
+/// let poly_size = 256;
+/// let (p0, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, Some(3329));
+/// let (p1, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, Some(3329));
+/// let v = vec![p0, p1];
+/// compress_vec(&v, 12);
+/// ```
+pub fn compress_vec(v: &Vec<Polynomial<i64>>, d: usize) -> Vec<Polynomial<i64>> {
+    v.iter().map(|poly| compress_poly(poly, d)).collect()
+}
+
+
 /// Decompress the polynomial by decompressing each coefficient
 /// 
 /// # Arguments

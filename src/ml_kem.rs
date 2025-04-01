@@ -1,4 +1,4 @@
-use crate::utils::{Parameters, hash_h, hash_g, generate_matrix_from_seed, generate_error_vector, generate_polynomial, encode_vector, vec_ntt, decode_vector, encode_poly, decode_poly, decompress_poly, compress_poly};
+use crate::utils::{Parameters, hash_h, hash_g, generate_matrix_from_seed, generate_error_vector, generate_polynomial, encode_vector, vec_ntt, decode_vector, encode_poly, decode_poly, decompress_poly, compress_poly, compress_vec};
 use module_lwe::utils::{gen_uniform_matrix,mul_mat_vec_simple,gen_small_vector,add_vec,mul_vec_simple};
 use module_lwe::encrypt::encrypt;
 use module_lwe::decrypt::decrypt;
@@ -242,7 +242,7 @@ impl MLKEM {
         let rho = rho_slice.to_vec();
 
         // decode the vector of polynomials from bytes
-        let t_hat = decode_vector(t_hat_bytes, self.params.k, 12, true);
+        let t_hat = decode_vector(t_hat_bytes.clone(), self.params.k, 12, true);
 
         // check that t_hat has been canonically encoded
         if encode_vector(&t_hat,12) != t_hat_bytes {
@@ -256,12 +256,14 @@ impl MLKEM {
 
         // generate error vectors y, e1 and error polynomial e2
         let prf_count = 0;
-        let (y, _prf_count) = generate_error_vector(r, self.params.eta_1, prf_count, self.params.k, self.params.n);
-        let (e1, _prf_count) = generate_error_vector(r, self.params.eta_2, prf_count, self.params.k, self.params.n);
-        let (e2, _prf_count) = generate_polynomial(r, self.params.eta_2, prf_count, self.params.n, None);
+        let (y, _prf_count) = generate_error_vector(r.clone(), self.params.eta_1, prf_count, self.params.k, self.params.n);
+        let (e1, _prf_count) = generate_error_vector(r.clone(), self.params.eta_2, prf_count, self.params.k, self.params.n);
+        let (e2, _prf_count) = generate_polynomial(r.clone(), self.params.eta_2, prf_count, self.params.n, None);
 
         // compute the NTT of the error vector y
         let y_hat = vec_ntt(&y, self.params.omega, self.params.n, self.params.q);
+
+        /*
 
         // compute u = a_hat.T * y_hat + e1
         let a_hat_t_dot_y_hat = from_ntt(mul_mat_vec_simple(&a_hat_t, &y_hat, self.params.q, &self.params.f, self.params.omega));
@@ -275,11 +277,14 @@ impl MLKEM {
         let v = polyadd(&polyadd(&t_hat_dot_y_hat, &e2, self.params.q, &self.params.f), &mu, self.params.q, &self.params.f);
 
         // compress polynomials u, v by compressing coeffs, then encode to bytes using params du, dv
-        let c1 = encode_poly(&compress_poly(&u,self.params.du),self.params.du);
+        let c1 = encode_vec(&compress_vec(&u,self.params.du),self.params.du);
         let c2 = encode_poly(&compress_poly(&v,self.params.dv),self.params.dv);
 
         //return c1 + c2, the concatenation of two encoded polynomials
         [c1, c2].concat()
+        */
+        
+        m
 
     }
 
