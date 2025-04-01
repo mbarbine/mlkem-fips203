@@ -696,3 +696,92 @@ pub fn decode_vector(input_bytes: Vec<u8>, k: usize, d: usize, _from_ntt: bool) 
 	}
 	v
 }
+
+
+/// Compute round((2^d / q) * x) % 2^d
+///
+/// # Arguments
+/// * `x` - int to be compressed
+/// * `d` - int specifying compression type
+///
+/// # Returns
+/// * `i64` - compressed integer
+fn compress_ele(x: i64, d: u32) -> i64 {
+    let t = 1 << d;
+    let y = (t * x + 1664) / 3329; // n.b. 1664 = 3329 / 2
+    y % t
+}
+
+
+/// Compute round((q / 2^d) * x)
+///
+/// # Arguments
+/// * `x` - int to be compressed
+/// * `d` - int specifying compression type
+///
+/// # Returns
+/// * `i64` - compressed integer
+fn decompress_ele(x: i64, d: u32) -> i64 {
+    let t = 1 << (d - 1);
+    (3329 * x + t) >> d
+}
+
+/// Compress the polynomial by compressing each coefficient
+///
+/// # Arguments
+/// * `poly` - polynomial to compress
+/// * `d` - integer to specify compression type
+///
+/// # Returns
+/// * `Polynomial<i64>` - a decompressed polynomial
+///
+/// # Example
+/// ```
+/// use ml_kem::utils::{generate_polynomial,compress_poly};
+/// let sigma = vec![0u8; 32];
+/// let eta = 3;
+/// let n = 0;
+/// let poly_size = 256;
+/// let (poly, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, Some(3329));
+/// let compressed_poly = compress_poly(&poly,12);
+/// assert_eq!(compressed_poly.coeffs().len(), poly.coeffs().len());
+/// ```
+///
+/// # Notes
+/// - This is lossy compression
+pub fn compress_poly(poly: &Polynomial<i64>, d: u32) -> Polynomial<i64> {
+    let compressed_coeffs: Vec<i64> = poly.coeffs().iter().map(|&c| compress_ele(c, d)).collect();
+    Polynomial::new(compressed_coeffs)
+}
+
+/// Decompress the polynomial by decompressing each coefficient
+/// 
+/// # Arguments
+/// * `poly` - polynomial to compress
+/// * `d` - integer to specify compression type
+///
+/// # Returns
+/// * `Polynomial<i64>` - a decompressed polynomial
+///
+/// # Example
+/// ```
+/// use ml_kem::utils::{generate_polynomial,compress_poly,decompress_poly};
+/// let sigma = vec![0u8; 32];
+/// let eta = 3;
+/// let n = 0;
+/// let poly_size = 256;
+/// let (poly, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, Some(3329));
+/// let compressed_poly = compress_poly(&poly,12);
+/// assert_eq!(compressed_poly.coeffs().len(), poly.coeffs().len());
+/// let poly_recovered = decompress_poly(&compressed_poly,12);
+/// assert_eq!(poly,poly_recovered);
+/// ```
+///
+/// # Notes 
+/// - This as compression is lossy, we have
+/// x' = decompress(compress(x)), which x' != x, but is
+/// close in magnitude.
+pub fn decompress_poly(poly: &Polynomial<i64>, d: u32) -> Polynomial<i64> {
+    let decompressed_coeffs: Vec<i64> = poly.coeffs().iter().map(|&c| decompress_ele(c, d)).collect();
+    Polynomial::new(decompressed_coeffs)
+}
