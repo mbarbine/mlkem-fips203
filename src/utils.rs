@@ -608,7 +608,7 @@ pub fn vec_ntt(v: &Vec<Polynomial<i64>>, omega: i64, n: usize, q: i64) -> Vec<Po
 /// let eta = 3;
 /// let n = 0;
 /// let poly_size = 256;
-/// let (poly, new_n) = generate_polynomial(sigma, eta, n, poly_size, None);
+/// let (poly, new_n) = generate_polynomial(sigma, eta, n, poly_size, Some(3329));
 /// let encoded = encode_poly(&poly, 12);
 /// let decoded = decode_poly(encoded, 12);
 /// assert_eq!(poly, decoded);
@@ -681,8 +681,8 @@ pub fn encode_vector(v: &Vec<Polynomial<i64>>, d: usize) -> Vec<u8> {
 /// let eta = 3;
 /// let n = 0;
 /// let poly_size = 256;
-/// let (p0, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, None);
-/// let (p1, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, None);
+/// let (p0, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, Some(3329));
+/// let (p1, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, Some(3329));
 /// let polys = vec![p0, p1];
 /// let encoded_bytes = encode_vector(&polys, 12);
 /// let decoded = decode_vector(encoded_bytes, 2, 12, false);
