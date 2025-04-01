@@ -516,8 +516,17 @@ pub fn generate_polynomial(
     poly_size: usize,
     q: Option<i64>,
 ) -> (Polynomial<i64>, u8) {
-    let prf_output = prf_3(sigma, b); // get the prf bytes
+    // get the prf_output depending on eta = 2, or eta = 3
+    let prf_output: Vec<u8>;
+    if eta == 2 {
+        prf_output = prf_2(sigma, b);
+    } else if eta == 3 {
+        prf_output = prf_3(sigma, b);
+    } else {
+        panic!("eta must be 2 or 3"); // Handle invalid eta values
+    }
     let poly = cbd(prf_output, eta, poly_size); // form the polynomial array from a centered binomial dist.
+    //if a modulus is set, place coeffs in [0,q-1]
     if let Some(q) = q {
         let coeffs = poly.coeffs();
         let mut mod_coeffs = vec![];
