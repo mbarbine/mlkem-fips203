@@ -1,4 +1,4 @@
-use crate::utils::{Parameters, hash_h, hash_g, generate_matrix_from_seed, generate_error_vector, encode_vec, vec_ntt, decode_vec};
+use crate::utils::{Parameters, hash_h, hash_g, generate_matrix_from_seed, generate_error_vector, encode_vector, vec_ntt, decode_vector};
 use module_lwe::utils::{gen_uniform_matrix,mul_mat_vec_simple,gen_small_vector,add_vec,mul_vec_simple};
 use module_lwe::encrypt::encrypt;
 use module_lwe::decrypt::decrypt;
