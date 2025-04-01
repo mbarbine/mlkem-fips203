@@ -264,13 +264,14 @@ impl MLKEM {
         let y_hat = vec_ntt(v, self.params.omega, self.params.n, self.params.q);
 
         // compute u = a_hat.T * y_hat + e1
-        let u = add_vec(&mul_mat_vec_simple(&a_hat_t, &y_hat, self.params.q, &self.params.f, self.params.omega).from_ntt(), &e1, self.params.q, &self.params.f);
+        let a_hat_t_dot_y_hat = from_ntt(mul_mat_vec_simple(&a_hat_t, &y_hat, self.params.q, &self.params.f, self.params.omega));
+        let u = add_vec(&a_hat_t_dot_y_hat, &e1, self.params.q, &self.params.f);
 
         //decode the polynomial mu from the bytes m
-        let mu = decode_poly(m, 1).decompress(1);
+        let mu = decompress_poly(decode_poly(m, 1),1);
 
         //compute v = t_hat.y_hat + e2 + mu
-        let t_hat_dot_y_hat = mul_vec_simple(t_hat, y_hat, self.params.q, self.params.f, self.params.omega).from_ntt();
+        let t_hat_dot_y_hat = from_ntt(mul_vec_simple(t_hat, y_hat, self.params.q, self.params.f, self.params.omega));
         v = polyadd(&polyadd(&t_hat_dot_y_hat, &e2, self.params.q, self.params.f), &mu, self.params.q, self.params.f);
 
         // compress polynomials u, v by compressing coeffs, then encode to bytes using params du, dv
