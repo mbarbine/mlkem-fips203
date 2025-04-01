@@ -565,32 +565,6 @@ pub fn encode_poly(poly: &Polynomial<i64>, d: usize) -> Vec<u8> {
     result
 }
 
-/// Applies the Number Theoretic Transform (NTT) to each polynomial in a vector.
-///
-/// This function takes a vector of polynomials, converts their coefficient slices 
-/// into owned `Vec<i64>` values, ensures they have a uniform length of `n` by 
-/// padding with zeros if necessary, and then applies the NTT to each polynomial.
-///
-/// # Arguments
-///
-/// * `v` - A reference to a vector of `Polynomial<i64>`, representing the input polynomials.
-/// * `omega` - The primitive root of unity used for the NTT.
-/// * `n` - The expected number of coefficients in each polynomial.
-/// * `q` - The modulus used for NTT computations.
-///
-/// # Returns
-///
-/// A vector of `Polynomial<i64>` where each polynomial has been transformed using NTT.
-pub fn vec_ntt(v: &Vec<Polynomial<i64>>, omega: i64, n: usize, q: i64) -> Vec<Polynomial<i64>> {
-    v.iter()
-        .map(|poly| {
-            let mut coeffs = poly.coeffs().to_vec(); // Convert slice to Vec<i64>
-            coeffs.resize(n, 0); // Ensure uniform length
-            Polynomial::new(ntt(&coeffs, omega, n, q))
-        })
-        .collect()
-}
-
 /// Decodes a byte vector into a polynomial based on the FIPS 203 standard (Algorithm 3).
 ///
 /// # Arguments
