@@ -879,9 +879,70 @@ pub fn vec_intt(v: &Vec<Polynomial<i64>>, omega: i64, n: usize, q: i64) -> Vec<P
         .collect()
 }
 
-/// compute the NTT (number theoretic transform) of a polynomial in Z_q[x]/(x^n+1)
+/// Computes the Number Theoretic Transform (NTT) of a polynomial in Z_q[x]/(x^n+1).
+///
+/// The NTT is a specialized version of the Discrete Fourier Transform (DFT) 
+/// that operates in a finite field. It is used to accelerate polynomial 
+/// multiplication in cryptographic schemes.
+///
+/// # Arguments
+/// * `poly` - A reference to the input polynomial.
+/// * `omega` - A primitive `n`th root of unity modulo `q`.
+/// * `n` - The polynomial ring degree.
+/// * `q` - The modulus used for coefficient reduction.
+///
+/// # Returns
+/// * A new `Polynomial<i64>` representing the NTT-transformed coefficients.
+///
+/// # Examples
+/// ```
+/// use ml_kem::utils::{generate_polynomial, poly_ntt};
+/// let sigma = vec![0u8; 32];
+/// let eta = 3;
+/// let b = 0;
+/// let n = 256;
+/// let q = 12289;
+/// let omega = ntt::omega(q, 2*n);
+/// let (poly, _b) = generate_polynomial(sigma.clone(), eta, b, n, Some(q));
+/// poly_ntt(&poly, omega, n, q);
+/// ```
 pub fn poly_ntt(poly: &Polynomial<i64>, omega: i64, n: usize, q: i64) -> Polynomial<i64> {
     let mut coeffs = poly.coeffs().to_vec(); // Convert slice to Vec<i64>
     coeffs.resize(n, 0); // Ensure uniform length
     Polynomial::new(ntt(&coeffs, omega, n, q))
+}
+
+/// Computes the inverse Number Theoretic Transform (INTT) of a polynomial in Z_q[x]/(x^n+1).
+///
+/// The INTT reverses the NTT operation, recovering the original polynomial 
+/// coefficients after an NTT transformation and pointwise multiplication. 
+/// This is crucial for polynomial multiplication in NTT-based cryptographic protocols.
+///
+/// # Arguments
+/// * `poly` - A reference to the input polynomial in the NTT domain.
+/// * `omega` - A primitive `n`th root of unity modulo `q`.
+/// * `n` - The polynomial ring degree.
+/// * `q` - The modulus used for coefficient reduction.
+///
+/// # Returns
+/// * A new `Polynomial<i64>` representing the inverse-transformed coefficients.
+///
+/// # Examples
+/// ```
+/// use ml_kem::utils::{generate_polynomial, poly_ntt, poly_intt};
+/// let sigma = vec![0u8; 32];
+/// let eta = 3;
+/// let b = 0;
+/// let n = 256;
+/// let q = 12289;
+/// let omega = ntt::omega(q, 2*n);
+/// let (poly, _b) = generate_polynomial(sigma.clone(), eta, b, n, Some(q));
+/// let poly_transformed = poly_ntt(&poly, omega, n, q);
+/// let poly_recovered = poly_intt(&poly_transformed, omega, n, q);
+/// assert_eq!(poly, poly_recovered);
+/// ```
+pub fn poly_intt(poly: &Polynomial<i64>, omega: i64, n: usize, q: i64) -> Polynomial<i64> {
+    let mut coeffs = poly.coeffs().to_vec(); // Convert slice to Vec<i64>
+    coeffs.resize(n, 0); // Ensure uniform length
+    Polynomial::new(intt(&coeffs, omega, n, q))
 }
