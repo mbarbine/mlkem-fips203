@@ -281,7 +281,7 @@ impl MLKEM {
         // compute the NTT of the error vector y
         let y_hat = vec_ntt(&y, self.params.omega, self.params.n, self.params.q);
 
-        // compute u = a_hat.T * y_hat + e1
+        // compute u = intt(a_hat.T * y_hat) + e1
         let a_hat_t_y_hat = mul_mat_vec_simple(&a_hat_t, &y_hat, self.params.q, &self.params.f, self.params.omega);
         let a_hat_t_y_hat_from_ntt = vec_intt(&a_hat_t_y_hat, self.params.omega, self.params.n, self.params.q);
         let u = add_vec(&a_hat_t_y_hat_from_ntt, &e1, self.params.q, &self.params.f);
@@ -289,12 +289,12 @@ impl MLKEM {
         //decode the polynomial mu from the bytes m
         let mu = decompress_poly(&decode_poly(m, 1),1);
 
-        //compute v = t_hat.y_hat + e2 + mu
+        //compute v = intt(t_hat.y_hat) + e2 + mu
         let t_hat_dot_y_hat = mul_vec_simple(&t_hat, &y_hat, self.params.q, &self.params.f, self.params.omega);
         let t_hat_dot_y_hat_from_ntt = poly_ntt(&t_hat_dot_y_hat, self.params.omega, self.params.n, self.params.q);
         let v = polyadd(&polyadd(&t_hat_dot_y_hat_from_ntt, &e2, self.params.q, &self.params.f), &mu, self.params.q, &self.params.f);
 
-        // compress polynomials u, v by compressing coeffs, then encode to bytes using params du, dv
+        // compress vec u, poly v by compressing coeffs, then encode to bytes using params du, dv
         let c1 = encode_vector(&compress_vec(&u,self.params.du),self.params.du);
         let c2 = encode_poly(&compress_poly(&v,self.params.dv),self.params.dv);
 
