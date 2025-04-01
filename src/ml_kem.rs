@@ -260,7 +260,7 @@ impl MLKEM {
         let rho = rho_slice.to_vec();
 
         // decode the vector of polynomials from bytes
-        let t_hat = decode_vector(&t_hat_bytes, self.params.k, 12, true);
+        let t_hat = decode_vector(&t_hat_bytes, self.params.k, 12);
 
         // check that t_hat has been canonically encoded
         if encode_vector(&t_hat,12) != t_hat_bytes {
@@ -300,6 +300,36 @@ impl MLKEM {
 
         //return c1 + c2, the concatenation of two encoded polynomials
         [c1, c2].concat()
+
+    }
+
+    /// Decrypts a message given the encoded secret key and ciphertext pair 
+    /// following Algorithm 15 (FIPS 203).
+    /// 
+    /// # Arguments
+    /// * `dk_pke` - byte encoded secret key, output of `_k_pke_encrypt`
+    /// * `c` - ciphertext as encoded vector, encoded polynomial
+    ///
+    /// # Returns
+    ///
+    /// 
+    pub fn _k_pke_decrypt(&self, dk_pke: Vec<u8>, c: Vec<u8> ) -> Vec<u8> {
+
+        // encoded size
+        let n = self.params.k * self.params.du * 32;
+        
+        // break ciphertext into two encoded parts
+        let (c1, c2) = c.split_at(n);
+        let c1 = c1.to_vec();
+        let c2 = c2.to_vec();
+
+        // decode and decompress c1, c2, dk_pke into vector u, polynomial v, secret key
+        let _u = decompress_vec(&decode_vector(&c1, self.params.k, self.params.du), self.params.du);
+        let _v = decompress_poly(&decode_poly(c2, self.params.dv), self.params.dv);
+        let _s_hat = decode_vector(&dk_pke, self.params.k, 12);
+
+        let m: Vec<u8> = Vec::new();
+        m
 
     }
 
