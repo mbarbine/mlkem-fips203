@@ -242,7 +242,7 @@ impl MLKEM {
         let rho = rho_slice.to_vec();
 
         // decode the vector of polynomials from bytes
-        let t_hat = decode_vector(t_hat_bytes.clone(), self.params.k, 12, true);
+        let t_hat = decode_vector(&t_hat_bytes, self.params.k, 12, true);
 
         // check that t_hat has been canonically encoded
         if encode_vector(&t_hat,12) != t_hat_bytes {

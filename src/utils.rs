@@ -659,10 +659,10 @@ pub fn encode_vector(v: &Vec<Polynomial<i64>>, d: usize) -> Vec<u8> {
 /// let (p1, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, Some(3329));
 /// let polys = vec![p0, p1];
 /// let encoded_bytes = encode_vector(&polys, 12);
-/// let decoded = decode_vector(encoded_bytes, 2, 12, false);
+/// let decoded = decode_vector(&encoded_bytes, 2, 12, false);
 /// assert_eq!(polys, decoded);
 /// ```
-pub fn decode_vector(input_bytes: Vec<u8>, k: usize, d: usize, _from_ntt: bool) -> Vec<Polynomial<i64>> {
+pub fn decode_vector(input_bytes: &Vec<u8>, k: usize, d: usize, _from_ntt: bool) -> Vec<Polynomial<i64>> {
 	assert_eq!(256*d*k, input_bytes.len()*8, "256*d*k must be length of input bytes times 8");	
 	let mut v = vec![Polynomial::new(vec![]); k];
 	for i in 0..k {
