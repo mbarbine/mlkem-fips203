@@ -680,7 +680,7 @@ pub fn decode_vector(input_bytes: Vec<u8>, k: usize, d: usize, _from_ntt: bool) 
 ///
 /// # Returns
 /// * `i64` - compressed integer
-fn compress_ele(x: i64, d: u32) -> i64 {
+fn compress_ele(x: i64, d: usize) -> i64 {
     let t = 1 << d;
     let y = (t * x + 1664) / 3329; // n.b. 1664 = 3329 / 2
     y % t
@@ -695,7 +695,7 @@ fn compress_ele(x: i64, d: u32) -> i64 {
 ///
 /// # Returns
 /// * `i64` - compressed integer
-fn decompress_ele(x: i64, d: u32) -> i64 {
+fn decompress_ele(x: i64, d: usize) -> i64 {
     let t = 1 << (d - 1);
     (3329 * x + t) >> d
 }
@@ -723,7 +723,7 @@ fn decompress_ele(x: i64, d: u32) -> i64 {
 ///
 /// # Notes
 /// - This is lossy compression
-pub fn compress_poly(poly: &Polynomial<i64>, d: u32) -> Polynomial<i64> {
+pub fn compress_poly(poly: &Polynomial<i64>, d: usize) -> Polynomial<i64> {
     let compressed_coeffs: Vec<i64> = poly.coeffs().iter().map(|&c| compress_ele(c, d)).collect();
     Polynomial::new(compressed_coeffs)
 }
@@ -755,7 +755,33 @@ pub fn compress_poly(poly: &Polynomial<i64>, d: u32) -> Polynomial<i64> {
 /// - This as compression is lossy, we have
 /// x' = decompress(compress(x)), which x' != x, but is
 /// close in magnitude.
-pub fn decompress_poly(poly: &Polynomial<i64>, d: u32) -> Polynomial<i64> {
+pub fn decompress_poly(poly: &Polynomial<i64>, d: usize) -> Polynomial<i64> {
     let decompressed_coeffs: Vec<i64> = poly.coeffs().iter().map(|&c| decompress_ele(c, d)).collect();
     Polynomial::new(decompressed_coeffs)
+}
+
+/// Applies the Number Theoretic Transform (NTT) to each polynomial in a vector.
+///
+/// This function takes a vector of polynomials, converts their coefficient slices 
+/// into owned `Vec<i64>` values, ensures they have a uniform length of `n` by 
+/// padding with zeros if necessary, and then applies the NTT to each polynomial.
+///
+/// # Arguments
+///
+/// * `v` - A reference to a vector of `Polynomial<i64>`, representing the input polynomials.
+/// * `omega` - The primitive root of unity used for the NTT.
+/// * `n` - The expected number of coefficients in each polynomial.
+/// * `q` - The modulus used for NTT computations.
+///
+/// # Returns
+///
+/// A vector of `Polynomial<i64>` where each polynomial has been transformed using NTT.
+pub fn vec_ntt(v: &Vec<Polynomial<i64>>, omega: i64, n: usize, q: i64) -> Vec<Polynomial<i64>> {
+    v.iter()
+        .map(|poly| {
+            let mut coeffs = poly.coeffs().to_vec(); // Convert slice to Vec<i64>
+            coeffs.resize(n, 0); // Ensure uniform length
+            Polynomial::new(ntt(&coeffs, omega, n, q))
+        })
+        .collect()
 }

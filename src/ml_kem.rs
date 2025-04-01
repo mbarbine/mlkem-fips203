@@ -1,4 +1,4 @@
-use crate::utils::{Parameters, hash_h, hash_g, generate_matrix_from_seed, generate_error_vector, generate_polynomial, encode_vector, vec_ntt, decode_vector, encode_poly, decode_poly};
+use crate::utils::{Parameters, hash_h, hash_g, generate_matrix_from_seed, generate_error_vector, generate_polynomial, encode_vector, vec_ntt, decode_vector, encode_poly, decode_poly, decompress_poly, compress_poly};
 use module_lwe::utils::{gen_uniform_matrix,mul_mat_vec_simple,gen_small_vector,add_vec,mul_vec_simple};
 use module_lwe::encrypt::encrypt;
 use module_lwe::decrypt::decrypt;
@@ -268,15 +268,15 @@ impl MLKEM {
         let u = add_vec(&a_hat_t_dot_y_hat, &e1, self.params.q, &self.params.f);
 
         //decode the polynomial mu from the bytes m
-        let mu = decompress_poly(decode_poly(m, 1),1);
+        let mu = decompress_poly(&decode_poly(m, 1),1);
 
         //compute v = t_hat.y_hat + e2 + mu
         let t_hat_dot_y_hat = from_ntt(mul_vec_simple(&t_hat, &y_hat, self.params.q, &self.params.f, self.params.omega));
         let v = polyadd(&polyadd(&t_hat_dot_y_hat, &e2, self.params.q, &self.params.f), &mu, self.params.q, &self.params.f);
 
         // compress polynomials u, v by compressing coeffs, then encode to bytes using params du, dv
-        let c1 = encode_poly(compress_poly(u,self.params.du),self.params.du);
-        let c2 = encode_poly(compress_poly(v,self.params.dv),self.params.dv);
+        let c1 = encode_poly(&compress_poly(&u,self.params.du),self.params.du);
+        let c2 = encode_poly(&compress_poly(&v,self.params.dv),self.params.dv);
 
         //return c1 + c2, the concatenation of two encoded polynomials
         [c1, c2].concat()
