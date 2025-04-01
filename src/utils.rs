@@ -549,9 +549,9 @@ pub fn encode_poly(poly: &Polynomial<i64>, d: usize) -> Vec<u8> {
     let mut t = BigUint::zero(); // Start with a BigUint initialized to zero
 
     for i in 0..255 {
-        // Left shift by d bits and then OR the current coefficient
-        t <<= d; // Equivalent to t = t * 2^d
+        // OR the current coefficient then left shift by d bits
         t |= BigUint::from(poly.coeffs()[256 - i - 1] as u64); // Use BigUint for coefficients
+        t <<= d; // Equivalent to t = t * 2^d
     }
 
     // Add the last coefficient
