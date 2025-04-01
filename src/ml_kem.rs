@@ -2,7 +2,7 @@ use crate::utils::{Parameters, hash_h, hash_g, generate_matrix_from_seed, genera
 use module_lwe::utils::{gen_uniform_matrix,gen_small_vector,add_vec,mul_mat_vec_simple, mul_vec_simple};
 use module_lwe::encrypt::encrypt;
 use module_lwe::decrypt::decrypt;
-use ring_lwe::utils::{gen_binary_poly,polyadd};
+use ring_lwe::utils::{gen_binary_poly,polyadd,polysub};
 use polynomial_ring::Polynomial;
 use aes_ctr_drbg::DrbgCtx;
 
@@ -324,11 +324,21 @@ impl MLKEM {
         let c2 = c2.to_vec();
 
         // decode and decompress c1, c2, dk_pke into vector u, polynomial v, secret key
-        let _u = decompress_vec(&decode_vector(&c1, self.params.k, self.params.du), self.params.du);
-        let _v = decompress_poly(&decode_poly(c2, self.params.dv), self.params.dv);
-        let _s_hat = decode_vector(&dk_pke, self.params.k, 12);
+        let u = decompress_vec(&decode_vector(&c1, self.params.k, self.params.du), self.params.du);
+        let v = decompress_poly(&decode_poly(c2, self.params.dv), self.params.dv);
+        let s_hat = decode_vector(&dk_pke, self.params.k, 12);
 
-        let m: Vec<u8> = Vec::new();
+        // compute u_hat, the NTT of u
+        let u_hat = vec_ntt(&u, self.params.omega, self.params.n, self.params.q);
+
+        // compute w = v - (s_hat.u_hat).from_ntt()
+        let s_hat_dot_u_hat = mul_vec_simple(&s_hat, &u_hat, self.params.q, &self.params.f, self.params.omega);
+        let s_hat_dot_u_hat_ntt = poly_ntt(&s_hat_dot_u_hat, self.params.omega, self.params.n, self.params.q);
+        let w = polysub(&v, &s_hat_dot_u_hat_ntt, self.params.q, &self.params.f);
+
+        // compress and encode w to get message m
+        let m = encode_poly(&compress_poly(&w,1),1);
+
         m
 
     }
