@@ -862,3 +862,10 @@ pub fn vec_intt(v: &Vec<Polynomial<i64>>, omega: i64, n: usize, q: i64) -> Vec<P
         })
         .collect()
 }
+
+/// compute the NTT (number theoretic transform) of a polynomial in Z_q[x]/(x^n+1)
+pub fn poly_ntt(poly: &Polynomial<i64>, omega: i64, n: usize, q: i64) -> Polynomial<i64> {
+    let mut coeffs = poly.coeffs().to_vec(); // Convert slice to Vec<i64>
+    coeffs.resize(n, 0); // Ensure uniform length
+    Polynomial::new(ntt(&coeffs, omega, n, q))
+}
