@@ -436,31 +436,38 @@ pub fn cbd(input_bytes: Vec<u8>, eta: usize, n:usize) -> Polynomial<i64> {
 /// ```
 /// use ml_kem::utils::generate_error_vector;
 /// let sigma = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20, 0x21, 0x22];
-/// let eta = 24;
-/// let n = 0x01;
+/// let eta = 3;
+/// let b = 0x01;
 /// let k = 3;
-/// let poly_size = 32;
-/// let (v,n) = generate_error_vector(sigma,eta,n,k,poly_size);
+/// let poly_size = 256;
+/// let (v,n) = generate_error_vector(sigma,eta,b,k,poly_size);
 /// assert_eq!(v.len(),3);
 /// ```
 pub fn generate_error_vector(
     sigma: Vec<u8>,
     eta: usize,
-    n: u8,
+    b: u8,
     k: usize,
-    poly_size: usize
+    poly_size: usize,
 ) -> (Vec<Polynomial<i64>>, u8) {
     let mut elements = vec![Polynomial::new(vec![]); k];
-    let mut current_n = n;
+    let mut current_b = b;
 
     for i in 0..k {
-        let prf_output = prf_3(sigma.clone(), current_n);
-		assert_eq!(eta*poly_size/4, prf_output.len(), "eta*poly_size/4 must be 192 (prf output length)");
+        let prf_output: Vec<u8>;
+        if eta == 2 {
+            prf_output = prf_2(sigma.clone(), current_b);
+        } else if eta == 3 {
+            prf_output = prf_3(sigma.clone(), current_b);
+        } else {
+            panic!("eta must be 2 or 3"); // Handle invalid eta values
+        }
+		assert_eq!(eta*poly_size/4, prf_output.len(), "eta*poly_size/4 must be 128 or 192 (prf output length)");
         elements[i] = cbd(prf_output, eta, poly_size);
-        current_n += 1;
+        current_b += 1;
     }
 
-    (elements, current_n)
+    (elements, current_b)
 }
 
 /// Generates a polynomial sampled from the Centered Binomial Distribution (CBD).
