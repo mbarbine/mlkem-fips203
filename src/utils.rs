@@ -1024,13 +1024,8 @@ pub fn ntt_base_multiplication(a0:i64 , a1:i64, b0:i64, b1:i64, zeta:i64) -> (i6
 ///
 /// # Returns
 /// * Polynomial<i64> - The product in the NTT space.
-pub fn ntt_coefficient_multiplication(f: Polynomial<i64>, g: Polynomial<i64>, zetas: Vec<i64>) -> Polynomial<i64> {
+pub fn ntt_coefficient_multiplication(f_coeffs: Vec<i64>, g_coeffs: Vec<i64>, zetas: Vec<i64>) -> Vec<i64> {
 	let mut new_coeffs = vec![];
-	let mut f_coeffs = f.coeffs().to_vec();
-	f_coeffs.resize(256,0); // Ensure uniform length
-	let mut g_coeffs = g.coeffs().to_vec();
-	g_coeffs.resize(256,0); // Ensure uniform length
-	
 	// Multiply in each of the 128 Z_q[x]/(x^2-zeta) factors
 	for i in 0..64 {
 		let (r0,r1) = ntt_base_multiplication(
@@ -1047,5 +1042,42 @@ pub fn ntt_coefficient_multiplication(f: Polynomial<i64>, g: Polynomial<i64>, ze
 			-zetas[64+i]);
 		new_coeffs.append(&mut vec![r0,r1,r2,r3]);
 	}
+	new_coeffs
+}
+
+/// perform the multiplication of two polynomials which are in the NTT domain
+/// 
+/// # Arguments
+/// * `f` - first polynomial
+/// * `g` - second polynomial
+/// * `zetas` - powers of roots of unity for NTT
+///
+/// # Returns
+/// * `Polynomial<i64> - the product f x g in the NTT domain
+///
+/// # Examples
+/// ```
+/// use ml_kem::utils::{generate_polynomial,poly_ntt, poly_intt, ntt_multiplication};
+/// use ml_kem::utils::Parameters;
+/// use ring_lwe::utils::polymul;
+/// let params = Parameters::default();
+/// let sigma = vec![0u8; 32];
+/// let b = 0;
+/// let (p0, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(3329));
+/// let (p1, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(3329));
+/// let p0_p1 = polymul(&p0, &p1, 3329, &params.f);
+/// let p0_ntt = poly_ntt(&p0, params.zetas.clone());
+/// let p1_ntt = poly_ntt(&p1, params.zetas.clone());
+/// let p0_ntt_p1_ntt = ntt_multiplication(p0_ntt, p1_ntt, params.zetas.clone());
+/// let p0_p1_recovered = poly_intt(&p0_ntt_p1_ntt, params.zetas.clone());
+/// assert_eq!(p0_p1, p0_p1_recovered);
+/// ```
+pub fn ntt_multiplication(f: Polynomial<i64>, g: Polynomial<i64>, zetas: Vec<i64>) -> Polynomial<i64> {
+	
+	let mut f_coeffs = f.coeffs().to_vec();
+	let mut g_coeffs = g.coeffs().to_vec();
+	f_coeffs.resize(256,0);
+	g_coeffs.resize(256,0); 
+	let new_coeffs = ntt_coefficient_multiplication(f_coeffs, g_coeffs, zetas);
 	Polynomial::new(new_coeffs)
 }
