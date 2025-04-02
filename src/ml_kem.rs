@@ -1,5 +1,5 @@
-use crate::utils::{Parameters, hash_h, hash_g, generate_matrix_from_seed, generate_error_vector, generate_polynomial, encode_vector, vec_ntt, vec_intt, poly_ntt, decode_vector, encode_poly, decode_poly, decompress_poly, compress_poly, compress_vec};
-use module_lwe::utils::{gen_uniform_matrix,gen_small_vector,add_vec,mul_mat_vec_simple, mul_vec_simple};
+use crate::utils::{Parameters, hash_h, hash_g, generate_matrix_from_seed, generate_error_vector, generate_polynomial, encode_vector, vec_ntt, vec_intt, poly_ntt, decode_vector, encode_poly, decode_poly, decompress_poly, compress_poly, compress_vec,mul_mat_vec_simple,mul_vec_simple, decompress_vec};
+use module_lwe::utils::{gen_uniform_matrix,gen_small_vector,add_vec};
 use module_lwe::encrypt::encrypt;
 use module_lwe::decrypt::decrypt;
 use ring_lwe::utils::{gen_binary_poly,polyadd,polysub};
@@ -73,7 +73,8 @@ impl MLKEM {
         // the NTT of e as an element of a rank k module over the polynomial ring
         let e_hat = vec_ntt(&e, self.params.zetas.clone());
         // A_hat @ s_hat + e_hat
-        let t_hat = add_vec(&mul_mat_vec_simple(&a_hat, &s_hat, self.params.q, &self.params.f, self.params.omega), &e_hat, self.params.q, &self.params.f);
+        let a_hat_s_hat = mul_mat_vec_simple(&a_hat, &s_hat, self.params.q, &self.params.f, self.params.zetas.clone());
+        let t_hat = add_vec(&a_hat_s_hat, &e_hat, self.params.q, &self.params.f);
 
         // Encode the keys
         let mut ek_pke = encode_vector(&t_hat, 12); // Encoding vec of polynomials to bytes
@@ -171,7 +172,7 @@ impl MLKEM {
         let y_hat = vec_ntt(&y, self.params.zetas.clone());
 
         // compute u = intt(a_hat.T * y_hat) + e1
-        let a_hat_t_y_hat = mul_mat_vec_simple(&a_hat_t, &y_hat, self.params.q, &self.params.f, self.params.omega);
+        let a_hat_t_y_hat = mul_mat_vec_simple(&a_hat_t, &y_hat, self.params.q, &self.params.f, self.params.zetas.clone());
         let a_hat_t_y_hat_from_ntt = vec_intt(&a_hat_t_y_hat, self.params.zetas.clone());
         let u = add_vec(&a_hat_t_y_hat_from_ntt, &e1, self.params.q, &self.params.f);
 
@@ -179,7 +180,7 @@ impl MLKEM {
         let mu = decompress_poly(&decode_poly(m, 1),1);
 
         //compute v = intt(t_hat.y_hat) + e2 + mu
-        let t_hat_dot_y_hat = mul_vec_simple(&t_hat, &y_hat, self.params.q, &self.params.f, self.params.omega);
+        let t_hat_dot_y_hat = mul_vec_simple(&t_hat, &y_hat, self.params.q, &self.params.f, self.params.zetas.clone());
         let t_hat_dot_y_hat_from_ntt = poly_ntt(&t_hat_dot_y_hat, self.params.zetas.clone());
         let v = polyadd(&polyadd(&t_hat_dot_y_hat_from_ntt, &e2, self.params.q, &self.params.f), &mu, self.params.q, &self.params.f);
 
@@ -239,7 +240,7 @@ impl MLKEM {
         let u_hat = vec_ntt(&u, self.params.zetas.clone());
 
         // compute w = v - (s_hat.u_hat).from_ntt()
-        let s_hat_dot_u_hat = mul_vec_simple(&s_hat, &u_hat, self.params.q, &self.params.f, self.params.omega);
+        let s_hat_dot_u_hat = mul_vec_simple(&s_hat, &u_hat, self.params.q, &self.params.f, self.params.zetas.clone());
         let s_hat_dot_u_hat_ntt = poly_ntt(&s_hat_dot_u_hat, self.params.zetas.clone());
         let w = polysub(&v, &s_hat_dot_u_hat_ntt, self.params.q, &self.params.f);
 

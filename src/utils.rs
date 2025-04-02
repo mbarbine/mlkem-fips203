@@ -1107,7 +1107,7 @@ pub fn ntt_multiplication(f: Polynomial<i64>, g: Polynomial<i64>, zetas: Vec<i64
 /// * `v1` - vector of polynomials
 /// * `modulus` - modulus
 /// * `poly_mod` - polynomial modulus
-/// * `omega` - 2nth root of unity
+/// * `zetas` - powers of roots of unity for NTT
 /// # Returns
 /// * `result` - polynomial
 /// 
@@ -1142,7 +1142,7 @@ pub fn mul_vec_simple(v0: &Vec<Polynomial<i64>>, v1: &Vec<Polynomial<i64>>, q: i
 /// * `v` - vector of polynomials
 /// * `modulus` - modulus
 /// * `poly_mod` - polynomial modulus
-/// * `omega` - 2nth root of unity
+/// * `zetas` - powers of roots of unity for NTT
 /// # Returns
 /// * `result` - vector of polynomials
 /// # Examples
