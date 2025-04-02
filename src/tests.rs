@@ -1,17 +1,23 @@
 #[cfg(test)]  // This makes the following module compile only during tests
 mod tests {
-    use ml_kem::utils::Parameters;
+    use ml_kem::utils::{Parameters,encode_poly,generate_polynomial};
 	use ml_kem::ml_kem::MLKEM;
 
     // Test for basic keygen/encapsulate/decapsulate
     #[test]
-    pub fn test_basic() {
-        let params = Parameters::default();  // Adjust this if needed
-        let mlkem = MLKEM::new(params); 
-        let (pk, sk) = mlkem.keygen();
-        let (k, ct) = mlkem.encapsulate(pk);
-		let k_recovered = mlkem.decapsulate(sk, ct);
-        assert_eq!(k, k_recovered, "test failed: {:?} != {:?}", k, k_recovered);
+    pub fn test_pke() {
+        let params = Parameters::default();
+        let mlkem = MLKEM::new(params);
+        let d = vec![0x01, 0x02, 0x03, 0x04];
+        let (ek_pke, dk_pke) = mlkem._k_pke_keygen(d);
+        let sigma = vec![0u8; 32];
+        let b = 0;
+        let (m_poly, _b) = generate_polynomial(sigma, mlkem.params.eta_1, b, mlkem.params.n , None);
+        let m = encode_poly(&m_poly,1);
+        let r = vec![0x01, 0x02, 0x03, 0x04];
+        let c = mlkem._k_pke_encrypt(ek_pke, m.clone(), r);
+        let m_dec = mlkem._k_pke_decrypt(dk_pke, c);
+        assert_eq!(m, m_dec);
     }
 
     #[test]
