@@ -9,6 +9,7 @@ use aes_ctr_drbg::DrbgCtx;
 use ntt::{ntt,intt};
 use num_bigint::BigUint;
 use num_traits::Zero;
+use ntt::mod_exp;
 
 
 /// default parameters for module-LWE
@@ -35,6 +36,8 @@ pub struct Parameters {
     pub f: Polynomial<i64>,
 	/// generate random bytes
 	pub random_bytes: fn(usize, Option<&mut DrbgCtx>) -> Vec<u8>,
+	/// ntt zeta values
+	pub zetas: Vec<i64>,
 }
 
 /// default parameters for module-LWE
@@ -53,8 +56,34 @@ impl Default for Parameters {
         poly_vec[0] = 1;
         poly_vec[n] = 1;
         let f = Polynomial::new(poly_vec);
-        Parameters { n, q, k, sigma, omega, eta_1, eta_2, du, dv, f, random_bytes: gen_random_bytes }
+        let zetas: Vec<i64> = (0..128)
+        	.map(|i| mod_exp(17, bit_reverse(i, 7), 3329))
+        	.collect();
+        Parameters { n, q, k, sigma, omega, eta_1, eta_2, du, dv, f, zetas, random_bytes: gen_random_bytes }
     }
+}
+
+/// Computes the bit-reversal of an unsigned `k`-bit integer `i`.
+///
+/// The function reverses the order of the `k` least significant bits of `i`.
+///
+/// # Examples
+///
+/// ```
+/// use ml_kem::utils::bit_reverse;
+/// let result = bit_reverse(13, 4); // 13 in 4-bit binary is 1101, reversed -> 1011 (11)
+/// assert_eq!(result, 11);
+/// ```
+pub fn bit_reverse(i: i64, k: usize) -> i64 {
+    let mut reversed = 0;
+    let mut n = i;
+    
+    for _ in 0..k {
+        reversed = (reversed << 1) | (n & 1);
+        n >>= 1;
+    }
+
+    reversed
 }
 
 /// generate random bytes using `getrandom` crate
@@ -891,6 +920,17 @@ pub fn vec_intt(v: &Vec<Polynomial<i64>>, omega: i64, n: usize, q: i64) -> Vec<P
 ///
 /// # Returns
 /// * A new `Polynomial<i64>` representing the NTT-transformed coefficients.
+///
+/// # Examples
+/// ```
+/// use ml_kem::utils::{generate_polynomial,poly_ntt};
+/// use ml_kem::utils::Parameters;
+/// let params = Parameters::default();
+/// let sigma = vec![0u8; 32];
+/// let b = 0;
+/// let (poly, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(3329));
+/// poly_ntt(&poly, params.zetas);
+/// ```
 pub fn poly_ntt(poly: &Polynomial<i64>, zetas: Vec<i64>) -> Polynomial<i64> {
     let mut coeffs = poly.coeffs().to_vec(); // Convert slice to Vec<i64>
 	coeffs.resize(256, 0); // Ensure uniform length

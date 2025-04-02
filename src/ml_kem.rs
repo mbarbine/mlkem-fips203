@@ -291,7 +291,7 @@ impl MLKEM {
 
         //compute v = intt(t_hat.y_hat) + e2 + mu
         let t_hat_dot_y_hat = mul_vec_simple(&t_hat, &y_hat, self.params.q, &self.params.f, self.params.omega);
-        let t_hat_dot_y_hat_from_ntt = poly_ntt(&t_hat_dot_y_hat, self.params.omega, self.params.n, self.params.q);
+        let t_hat_dot_y_hat_from_ntt = poly_ntt(&t_hat_dot_y_hat, self.params.zetas.clone());
         let v = polyadd(&polyadd(&t_hat_dot_y_hat_from_ntt, &e2, self.params.q, &self.params.f), &mu, self.params.q, &self.params.f);
 
         // compress vec u, poly v by compressing coeffs, then encode to bytes using params du, dv
