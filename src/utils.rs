@@ -9,6 +9,7 @@ use aes_ctr_drbg::DrbgCtx;
 use num_bigint::BigUint;
 use num_traits::Zero;
 use ntt::mod_exp;
+use ring_lwe::utils::polyadd;
 
 
 /// default parameters for module-LWE
@@ -1085,4 +1086,72 @@ pub fn ntt_multiplication(f: Polynomial<i64>, g: Polynomial<i64>, zetas: Vec<i64
 	g_coeffs.resize(256,0); 
 	let new_coeffs = ntt_coefficient_multiplication(f_coeffs, g_coeffs, zetas);
 	Polynomial::new(new_coeffs)
+}
+
+/// take the dot product of two vectors of polynomials
+/// # Arguments
+/// * `v0` - vector of polynomials
+/// * `v1` - vector of polynomials
+/// * `modulus` - modulus
+/// * `poly_mod` - polynomial modulus
+/// * `omega` - 2nth root of unity
+/// # Returns
+/// * `result` - polynomial
+/// 
+/// # Examples
+/// ```
+/// use ml_kem::utils::{generate_polynomial,mul_vec_simple};
+/// use ml_kem::utils::Parameters;
+/// let params = Parameters::default();
+/// let sigma = vec![0u8; 32];
+/// let b = 0;
+/// let (p0, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(3329));
+/// let (p1, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(3329));
+/// let (p2, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(3329));
+/// let (p3, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(3329));
+/// let v0 = vec![p0, p1];
+/// let v1 = vec![p2, p3];
+/// let v0_dot_v1 = mul_vec_simple(&v0,&v1,params.q, &params.f, params.zetas.clone());
+/// assert_eq!(v0_dot_v1.coeffs().len(), params.n);
+/// ```
+pub fn mul_vec_simple(v0: &Vec<Polynomial<i64>>, v1: &Vec<Polynomial<i64>>, q: i64, f: &Polynomial<i64>, zetas: Vec<i64>) -> Polynomial<i64> {
+	assert!(v0.len() == v1.len());
+	let mut result = Polynomial::new(vec![]);
+	for i in 0..v0.len() {
+		result = polyadd(&result, &ntt_multiplication(v0[i].clone(), v1[i].clone(), zetas.clone()), q, &f);
+	}
+	result
+}
+
+/// multiply a matrix by a vector of polynomials
+/// # Arguments
+/// * `m` - matrix of polynomials
+/// * `v` - vector of polynomials
+/// * `modulus` - modulus
+/// * `poly_mod` - polynomial modulus
+/// * `omega` - 2nth root of unity
+/// # Returns
+/// * `result` - vector of polynomials
+/// # Examples
+/// ```
+/// use ml_kem::utils::{generate_polynomial,mul_vec_simple,generate_matrix_from_seed,mul_mat_vec_simple};
+/// use ml_kem::utils::Parameters;
+/// let params = Parameters::default();
+/// let sigma = vec![0u8; 32];
+/// let b = 0;
+/// let (p0, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(3329));
+/// let (p1, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(3329));
+/// let v0 = vec![p0, p1];
+/// let rho = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20];
+/// let rank = 2;
+/// let a_hat = generate_matrix_from_seed(rho,rank,params.n,false);
+/// let v = mul_mat_vec_simple(&a_hat, &v0, params.q, &params.f, params.zetas.clone());
+/// ```
+pub fn mul_mat_vec_simple(m: &Vec<Vec<Polynomial<i64>>>, v: &Vec<Polynomial<i64>>, q: i64, f: &Polynomial<i64>, zetas: Vec<i64>) -> Vec<Polynomial<i64>> {
+	
+	let mut result = vec![];
+	for i in 0..m.len() {
+		result.push(mul_vec_simple(&m[i], &v, q, &f, zetas.clone()));
+	}
+	result
 }
