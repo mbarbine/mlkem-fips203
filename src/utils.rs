@@ -28,8 +28,6 @@ pub struct Parameters {
 	pub du: usize,
 	/// dv
 	pub dv: usize,
-    /// Standard deviation of the error
-    pub sigma: f64,
 	/// Polynomial modulus
     pub f: Polynomial<i64>,
 	/// generate random bytes
@@ -44,7 +42,6 @@ impl Default for Parameters {
         let n = 256;
         let q = 3329;
         let k = 4;
-        let sigma = 3.19;
 		let eta_1 = 3;
 		let eta_2 = 2;
 		let du = 10;
@@ -56,7 +53,7 @@ impl Default for Parameters {
         let zetas: Vec<i64> = (0..128)
         	.map(|i| mod_exp(17, bit_reverse(i, 7), 3329))
         	.collect();
-        Parameters { n, q, k, sigma, eta_1, eta_2, du, dv, f, zetas, random_bytes: gen_random_bytes }
+        Parameters { n, q, k, eta_1, eta_2, du, dv, f, zetas, random_bytes: gen_random_bytes }
     }
 }
 
