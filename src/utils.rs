@@ -30,8 +30,6 @@ pub struct Parameters {
 	pub dv: usize,
     /// Standard deviation of the error
     pub sigma: f64,
-	/// 2n-th root of unity	
-    pub omega: i64,
 	/// Polynomial modulus
     pub f: Polynomial<i64>,
 	/// generate random bytes
@@ -44,10 +42,9 @@ pub struct Parameters {
 impl Default for Parameters {
     fn default() -> Self {
         let n = 256;
-        let q = 12289;
+        let q = 3329;
         let k = 4;
         let sigma = 3.19;
-		let omega = ntt::omega(q, 2*n);
 		let eta_1 = 3;
 		let eta_2 = 2;
 		let du = 10;
@@ -59,7 +56,7 @@ impl Default for Parameters {
         let zetas: Vec<i64> = (0..128)
         	.map(|i| mod_exp(17, bit_reverse(i, 7), 3329))
         	.collect();
-        Parameters { n, q, k, sigma, omega, eta_1, eta_2, du, dv, f, zetas, random_bytes: gen_random_bytes }
+        Parameters { n, q, k, sigma, eta_1, eta_2, du, dv, f, zetas, random_bytes: gen_random_bytes }
     }
 }
 
@@ -861,9 +858,7 @@ pub fn decompress_poly(poly: &Polynomial<i64>, d: usize) -> Polynomial<i64> {
 /// # Arguments
 ///
 /// * `v` - A reference to a vector of `Polynomial<i64>`, representing the input polynomials.
-/// * `omega` - The primitive root of unity used for the NTT.
-/// * `n` - The expected number of coefficients in each polynomial.
-/// * `q` - The modulus used for NTT computations.
+/// * `zetas` - The powers of roots of unity used for the NTT.
 ///
 /// # Returns
 ///
@@ -899,9 +894,7 @@ pub fn vec_ntt(v: &Vec<Polynomial<i64>>, zetas: Vec<i64>) -> Vec<Polynomial<i64>
 /// # Arguments
 ///
 /// * `v` - A reference to a vector of `Polynomial<i64>`, representing the input polynomials.
-/// * `omega` - The primitive root of unity used for the NTT.
-/// * `n` - The expected number of coefficients in each polynomial.
-/// * `q` - The modulus used for NTT computations.
+/// * `zetas` - The powers of roots of unity used for the NTT.
 ///
 /// # Returns
 ///
