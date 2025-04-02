@@ -1,8 +1,7 @@
 #[cfg(test)]  // This makes the following module compile only during tests
 mod tests {
-    use ml_kem::utils::{Parameters,encode_poly,compress_poly};
+    use ml_kem::utils::{Parameters,encode_poly,compress_poly,generate_polynomial,mod_coeffs};
 	use ml_kem::ml_kem::MLKEM;
-    use ring_lwe::utils::gen_binary_poly;
 
     // Test for basic keygen/encapsulate/decapsulate
     #[test]
@@ -11,9 +10,12 @@ mod tests {
         let mlkem = MLKEM::new(params);
         let d = vec![0x01, 0x02, 0x03, 0x04];
         let (ek_pke, dk_pke) = mlkem._k_pke_keygen(d);
-        let m_poly = gen_binary_poly(mlkem.params.n, None);
-        println!("m_poly = {:?}", m_poly);
-        println!("compressed_m_poly = {:?}",compress_poly(&m_poly,1));
+        let sigma = vec![0u8; 32];
+        let b = 0;
+        let (m_poly, _b) = generate_polynomial(sigma, mlkem.params.eta_1, b, mlkem.params.n, None);
+        let m_poly_mod = mod_coeffs(m_poly.clone(), mlkem.params.q);
+        println!("m_poly_mod = {:?}", m_poly_mod);
+        println!("compressed_m_poly = {:?}",compress_poly(&m_poly_mod,1));
         let m = encode_poly(&compress_poly(&m_poly,1),1);
         let r = vec![0x01, 0x02, 0x03, 0x04];
         let c = mlkem._k_pke_encrypt(ek_pke, m.clone(), r);
