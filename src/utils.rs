@@ -1062,7 +1062,7 @@ pub fn ntt_coefficient_multiplication(f_coeffs: Vec<i64>, g_coeffs: Vec<i64>, ze
 ///
 /// # Examples
 /// ```
-/// use ml_kem::utils::{generate_polynomial,poly_ntt, poly_intt, ntt_multiplication};
+/// use ml_kem::utils::{mod_coeffs,generate_polynomial,poly_ntt, poly_intt, ntt_multiplication};
 /// use ml_kem::utils::Parameters;
 /// use ring_lwe::utils::polymul;
 /// let params = Parameters::default();
@@ -1070,7 +1070,7 @@ pub fn ntt_coefficient_multiplication(f_coeffs: Vec<i64>, g_coeffs: Vec<i64>, ze
 /// let b = 0;
 /// let (p0, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(3329));
 /// let (p1, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(3329));
-/// let p0_p1 = polymul(&p0, &p1, 3329, &params.f);
+/// let p0_p1 = mod_coeffs(polymul(&p0, &p1, 3329, &params.f), 3329);
 /// let p0_ntt = poly_ntt(&p0, params.zetas.clone());
 /// let p1_ntt = poly_ntt(&p1, params.zetas.clone());
 /// let p0_ntt_p1_ntt = ntt_multiplication(p0_ntt, p1_ntt, params.zetas.clone());
