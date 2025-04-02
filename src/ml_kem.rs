@@ -1,4 +1,4 @@
-use crate::utils::{Parameters, hash_g, generate_matrix_from_seed, generate_error_vector, generate_polynomial, encode_vector, vec_ntt, vec_intt, poly_ntt, poly_intt, decode_vector, encode_poly, decode_poly, decompress_poly, compress_poly, compress_vec,mul_mat_vec_simple,mul_vec_simple, decompress_vec};
+use crate::utils::{Parameters, hash_g, generate_matrix_from_seed, generate_error_vector, generate_polynomial, encode_vector, vec_ntt, vec_intt, poly_intt, decode_vector, encode_poly, decode_poly, decompress_poly, compress_poly, compress_vec,mul_mat_vec_simple,mul_vec_simple, decompress_vec};
 use module_lwe::utils::add_vec;
 use ring_lwe::utils::{polyadd,polysub};
 use aes_ctr_drbg::DrbgCtx;
@@ -106,15 +106,12 @@ impl MLKEM {
     /// ```
     /// use ml_kem::ml_kem::MLKEM;
     /// use ml_kem::utils::{Parameters,encode_poly,compress_poly, generate_polynomial};
-    /// let params = Parameters::default();
     /// let mlkem = MLKEM::new(params);
     /// let d = vec![0x01, 0x02, 0x03, 0x04];
     /// let (ek_pke, _dk_pke) = mlkem._k_pke_keygen(d);
     /// let sigma = vec![0u8; 32];
-    /// let eta = 3;
-    /// let n = 0;
-    /// let poly_size = 256;
-    /// let (m_poly, _n) = generate_polynomial(sigma, eta, n, poly_size, None);
+    /// let b = 0;
+    /// let (m_poly, _b) = generate_polynomial(sigma, mlkem.params.eta_1, b, mlkem.params.n, None);
     /// let m = encode_poly(&compress_poly(&m_poly,1),1);
     /// let r = vec![0x01, 0x02, 0x03, 0x04];
     /// let c = mlkem._k_pke_encrypt(ek_pke, m, r);
