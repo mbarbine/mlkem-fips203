@@ -1,5 +1,5 @@
 use crate::utils::{Parameters, hash_h, hash_g, generate_matrix_from_seed, generate_error_vector, generate_polynomial, encode_vector, vec_ntt, vec_intt, poly_ntt, decode_vector, encode_poly, decode_poly, decompress_poly, compress_poly, compress_vec};
-use module_lwe::utils::{gen_uniform_matrix,mul_mat_vec_simple,gen_small_vector,add_vec,mul_vec_simple};
+use module_lwe::utils::{gen_uniform_matrix,gen_small_vector,add_vec,mul_mat_vec_simple, mul_vec_simple};
 use module_lwe::encrypt::encrypt;
 use module_lwe::decrypt::decrypt;
 use ring_lwe::utils::{gen_binary_poly,polyadd};
