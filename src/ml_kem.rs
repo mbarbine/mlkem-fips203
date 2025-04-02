@@ -107,11 +107,10 @@ impl MLKEM {
     /// use ml_kem::ml_kem::MLKEM;
     /// use ml_kem::utils::{Parameters,encode_poly,compress_poly, generate_polynomial};
     /// let mlkem = MLKEM::new(params);
+    /// use ring_lwe::utils::gen_uniform_poly;
     /// let d = vec![0x01, 0x02, 0x03, 0x04];
     /// let (ek_pke, _dk_pke) = mlkem._k_pke_keygen(d);
-    /// let sigma = vec![0u8; 32];
-    /// let b = 0;
-    /// let (m_poly, _b) = generate_polynomial(sigma, mlkem.params.eta_1, b, mlkem.params.n, None);
+    /// let m_poly = gen_uniform_poly(mlkem.params.n, mlkem.params.q, None);
     /// let m = encode_poly(&compress_poly(&m_poly,1),1);
     /// let r = vec![0x01, 0x02, 0x03, 0x04];
     /// let c = mlkem._k_pke_encrypt(ek_pke, m, r);
@@ -201,14 +200,12 @@ impl MLKEM {
     /// ```
     /// use ml_kem::ml_kem::MLKEM;
     /// use ml_kem::utils::{Parameters,encode_poly,generate_polynomial};
+    /// use ring_lwe::utils::gen_uniform_poly;
     /// let params = Parameters::default();
     /// let mlkem = MLKEM::new(params);
     /// let d = vec![0x01, 0x02, 0x03, 0x04];
     /// let (ek_pke, dk_pke) = mlkem._k_pke_keygen(d);
-    /// let sigma = vec![0u8; 32];
-    /// let eta = 3;
-    /// let b = 0;
-    /// let (m_poly, _b) = generate_polynomial(sigma, eta, b, mlkem.params.n , None);
+    /// let m_poly = gen_uniform_poly(mlkem.params.n, mlkem.params.q, None);
     /// let m = encode_poly(&compress_poly(&m_poly,1),1);
     /// let r = vec![0x01, 0x02, 0x03, 0x04];
     /// let c = mlkem._k_pke_encrypt(ek_pke, m.clone(), r);
