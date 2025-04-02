@@ -6,7 +6,6 @@ use rs_shake128::Shake128Hasher;
 use rs_shake256::Shake256Hasher;
 use getrandom::getrandom;
 use aes_ctr_drbg::DrbgCtx;
-use ntt::{ntt,intt};
 use num_bigint::BigUint;
 use num_traits::Zero;
 use ntt::mod_exp;
@@ -844,24 +843,21 @@ pub fn decompress_poly(poly: &Polynomial<i64>, d: usize) -> Polynomial<i64> {
 /// # Example
 /// ```
 /// use ml_kem::utils::{generate_polynomial, vec_ntt};
+/// use ml_kem::utils::Parameters;
+/// let params = Parameters::default();
 /// let sigma = vec![0u8; 32];
 /// let eta = 3;
 /// let b = 0;
 /// let n = 256;
-/// let q = 12289;
-/// let omega = ntt::omega(q, 2*n);
+/// let q = 3329;
 /// let (p0, _b) = generate_polynomial(sigma.clone(), eta, b, n, Some(q));
 /// let (p1, _b) = generate_polynomial(sigma.clone(), eta, b, n, Some(q));
 /// let v = vec![p0, p1];
-/// vec_ntt(&v, omega, n, q);
+/// vec_ntt(&v, params.zetas);
 /// ```
-pub fn vec_ntt(v: &Vec<Polynomial<i64>>, omega: i64, n: usize, q: i64) -> Vec<Polynomial<i64>> {
+pub fn vec_ntt(v: &Vec<Polynomial<i64>>, zetas: Vec<i64>) -> Vec<Polynomial<i64>> {
     v.iter()
-        .map(|poly| {
-            let mut coeffs = poly.coeffs().to_vec(); // Convert slice to Vec<i64>
-            coeffs.resize(n, 0); // Ensure uniform length
-            Polynomial::new(ntt(&coeffs, omega, n, q))
-        })
+        .map(|poly| poly_ntt(poly, zetas.clone())) // Clone `zetas` for each polynomial
         .collect()
 }
 
@@ -885,26 +881,23 @@ pub fn vec_ntt(v: &Vec<Polynomial<i64>>, omega: i64, n: usize, q: i64) -> Vec<Po
 /// # Example
 /// ```
 /// use ml_kem::utils::{generate_polynomial, vec_ntt, vec_intt};
+/// use ml_kem::utils::Parameters;
+/// let params = Parameters::default();
 /// let sigma = vec![0u8; 32];
 /// let eta = 3;
 /// let b = 0;
 /// let n = 256;
-/// let q = 12289;
-/// let omega = ntt::omega(q, 2*n);
+/// let q = 3329;
 /// let (p0, _b) = generate_polynomial(sigma.clone(), eta, b, n, Some(q));
 /// let (p1, _b) = generate_polynomial(sigma.clone(), eta, b, n, Some(q));
 /// let v = vec![p0, p1];
-/// let v_ntt = vec_ntt(&v, omega, n, q);
-/// let v_recovered = vec_intt(&v_ntt, omega, n, q);
+/// let v_ntt = vec_ntt(&v, params.zetas.clone());
+/// let v_recovered = vec_intt(&v_ntt, params.zetas.clone());
 /// assert_eq!(v, v_recovered);
 /// ```
-pub fn vec_intt(v: &Vec<Polynomial<i64>>, omega: i64, n: usize, q: i64) -> Vec<Polynomial<i64>> {
+pub fn vec_intt(v: &Vec<Polynomial<i64>>, zetas: Vec<i64>) -> Vec<Polynomial<i64>> {
     v.iter()
-        .map(|poly| {
-            let mut coeffs = poly.coeffs().to_vec(); // Convert slice to Vec<i64>
-            coeffs.resize(n, 0); // Ensure uniform length
-            Polynomial::new(intt(&coeffs, omega, n, q))
-        })
+        .map(|poly| poly_intt(poly, zetas.clone())) // Clone `zetas` for each polynomial
         .collect()
 }
 
