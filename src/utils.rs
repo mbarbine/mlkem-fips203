@@ -965,6 +965,19 @@ pub fn poly_ntt(poly: &Polynomial<i64>, zetas: Vec<i64>) -> Polynomial<i64> {
 ///
 /// # Returns
 /// * A new `Polynomial<i64>` representing the inverse-transformed coefficients.
+///
+/// # Examples
+/// ```
+/// use ml_kem::utils::{generate_polynomial,poly_ntt,poly_intt};
+/// use ml_kem::utils::Parameters;
+/// let params = Parameters::default();
+/// let sigma = vec![0u8; 32];
+/// let b = 0;
+/// let (poly, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(3329));
+/// let poly_ntt_forward = poly_ntt(&poly, params.zetas.clone());
+/// let poly_recovered = poly_intt(&poly_ntt_forward, params.zetas.clone());
+/// assert_eq!(poly,poly_recovered);
+/// ```
 pub fn poly_intt(poly: &Polynomial<i64>, zetas: Vec<i64>) -> Polynomial<i64> {
     let mut coeffs = poly.coeffs().to_vec(); // Convert slice to Vec<i64>
     coeffs.resize(256, 0); // Ensure uniform length
