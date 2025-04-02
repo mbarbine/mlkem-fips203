@@ -180,9 +180,9 @@ impl MLKEM {
         let (e, _prf_count) = generate_error_vector(sigma.clone(), self.params.eta_1, prf_count, self.params.k, self.params.n);
 
         // the NTT of s as an element of a rank k module over the polynomial ring
-        let s_hat = vec_ntt(&s,self.params.omega, self.params.n, self.params.q);
+        let s_hat = vec_ntt(&s, self.params.zetas.clone());
         // the NTT of e as an element of a rank k module over the polynomial ring
-        let e_hat = vec_ntt(&e,self.params.omega, self.params.n, self.params.q);
+        let e_hat = vec_ntt(&e, self.params.zetas.clone());
         // A_hat @ s_hat + e_hat
         let t_hat = add_vec(&mul_mat_vec_simple(&a_hat, &s_hat, self.params.q, &self.params.f, self.params.omega), &e_hat, self.params.q, &self.params.f);
 
@@ -279,11 +279,11 @@ impl MLKEM {
         let (e2, _prf_count) = generate_polynomial(r.clone(), self.params.eta_2, prf_count, self.params.n, None);
 
         // compute the NTT of the error vector y
-        let y_hat = vec_ntt(&y, self.params.omega, self.params.n, self.params.q);
+        let y_hat = vec_ntt(&y, self.params.zetas.clone());
 
         // compute u = intt(a_hat.T * y_hat) + e1
         let a_hat_t_y_hat = mul_mat_vec_simple(&a_hat_t, &y_hat, self.params.q, &self.params.f, self.params.omega);
-        let a_hat_t_y_hat_from_ntt = vec_intt(&a_hat_t_y_hat, self.params.omega, self.params.n, self.params.q);
+        let a_hat_t_y_hat_from_ntt = vec_intt(&a_hat_t_y_hat, self.params.zetas.clone());
         let u = add_vec(&a_hat_t_y_hat_from_ntt, &e1, self.params.q, &self.params.f);
 
         //decode the polynomial mu from the bytes m
@@ -291,7 +291,7 @@ impl MLKEM {
 
         //compute v = intt(t_hat.y_hat) + e2 + mu
         let t_hat_dot_y_hat = mul_vec_simple(&t_hat, &y_hat, self.params.q, &self.params.f, self.params.omega);
-        let t_hat_dot_y_hat_from_ntt = poly_ntt(&t_hat_dot_y_hat, self.params.omega, self.params.n, self.params.q);
+        let t_hat_dot_y_hat_from_ntt = poly_ntt(&t_hat_dot_y_hat, self.params.zetas.clone());
         let v = polyadd(&polyadd(&t_hat_dot_y_hat_from_ntt, &e2, self.params.q, &self.params.f), &mu, self.params.q, &self.params.f);
 
         // compress vec u, poly v by compressing coeffs, then encode to bytes using params du, dv
