@@ -62,6 +62,16 @@ impl Default for Parameters {
     }
 }
 
+/// function to ensure coefficients are in [0,q-1] after taking remainders
+pub fn mod_coeffs(poly: Polynomial<i64>, q: i64) -> Polynomial<i64> {
+	let coeffs = poly.coeffs();
+	let mut mod_coeffs = vec![];
+	for i in 0..coeffs.len() {
+		mod_coeffs.push(coeffs[i].rem_euclid(q));
+	}
+	Polynomial::new(mod_coeffs)
+}
+
 /// Computes the bit-reversal of an unsigned `k`-bit integer `i`.
 ///
 /// The function reverses the order of the `k` least significant bits of `i`.
@@ -556,12 +566,7 @@ pub fn generate_polynomial(
     let poly = cbd(prf_output, eta, poly_size); // form the polynomial array from a centered binomial dist.
     //if a modulus is set, place coeffs in [0,q-1]
     if let Some(q) = q {
-        let coeffs = poly.coeffs();
-        let mut mod_coeffs = vec![];
-        for i in 0..coeffs.len() {
-            mod_coeffs.push(coeffs[i].rem_euclid(q));
-        }
-        return (Polynomial::new(mod_coeffs), b + 1);
+        return (mod_coeffs(poly,q), b + 1);
     }
     (poly, b + 1)
 }
