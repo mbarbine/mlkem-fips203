@@ -887,29 +887,30 @@ pub fn vec_intt(v: &Vec<Polynomial<i64>>, omega: i64, n: usize, q: i64) -> Vec<P
 ///
 /// # Arguments
 /// * `poly` - A reference to the input polynomial.
-/// * `omega` - A primitive `n`th root of unity modulo `q`.
-/// * `n` - The polynomial ring degree.
-/// * `q` - The modulus used for coefficient reduction.
+/// * `zetas` - Precomputed root of unity powers.
 ///
 /// # Returns
 /// * A new `Polynomial<i64>` representing the NTT-transformed coefficients.
-///
-/// # Examples
-/// ```
-/// use ml_kem::utils::{generate_polynomial, poly_ntt};
-/// let sigma = vec![0u8; 32];
-/// let eta = 3;
-/// let b = 0;
-/// let n = 256;
-/// let q = 12289;
-/// let omega = ntt::omega(q, 2*n);
-/// let (poly, _b) = generate_polynomial(sigma.clone(), eta, b, n, Some(q));
-/// poly_ntt(&poly, omega, n, q);
-/// ```
-pub fn poly_ntt(poly: &Polynomial<i64>, omega: i64, n: usize, q: i64) -> Polynomial<i64> {
+pub fn poly_ntt(poly: &Polynomial<i64>, zetas: Vec<i64>) -> Polynomial<i64> {
     let mut coeffs = poly.coeffs().to_vec(); // Convert slice to Vec<i64>
-    coeffs.resize(n, 0); // Ensure uniform length
-    Polynomial::new(ntt(&coeffs, omega, n, q))
+	coeffs.resize(256, 0); // Ensure uniform length
+    let mut k = 1;
+	let mut l = 128;
+	while l >= 2 {
+		let mut start = 0;
+		while start < 256 {
+			let zeta = zetas[k];
+			k += 1;
+			for j in start..start+l {
+				let t = zeta*coeffs[j+l];
+				coeffs[j+l] = (coeffs[j]-t).rem_euclid(3329);
+				coeffs[j] = (coeffs[j]+t).rem_euclid(3329);
+			}
+			start += 2*l;
+		}
+		l >>= 1;
+	}
+	Polynomial::new(coeffs)
 }
 
 /// Computes the inverse Number Theoretic Transform (INTT) of a polynomial in Z_q[x]/(x^n+1).
@@ -920,29 +921,85 @@ pub fn poly_ntt(poly: &Polynomial<i64>, omega: i64, n: usize, q: i64) -> Polynom
 ///
 /// # Arguments
 /// * `poly` - A reference to the input polynomial in the NTT domain.
-/// * `omega` - A primitive `n`th root of unity modulo `q`.
-/// * `n` - The polynomial ring degree.
-/// * `q` - The modulus used for coefficient reduction.
+/// * `zetas` - Precomputed root of unity powers.
 ///
 /// # Returns
 /// * A new `Polynomial<i64>` representing the inverse-transformed coefficients.
-///
-/// # Examples
-/// ```
-/// use ml_kem::utils::{generate_polynomial, poly_ntt, poly_intt};
-/// let sigma = vec![0u8; 32];
-/// let eta = 3;
-/// let b = 0;
-/// let n = 256;
-/// let q = 12289;
-/// let omega = ntt::omega(q, 2*n);
-/// let (poly, _b) = generate_polynomial(sigma.clone(), eta, b, n, Some(q));
-/// let poly_transformed = poly_ntt(&poly, omega, n, q);
-/// let poly_recovered = poly_intt(&poly_transformed, omega, n, q);
-/// assert_eq!(poly, poly_recovered);
-/// ```
-pub fn poly_intt(poly: &Polynomial<i64>, omega: i64, n: usize, q: i64) -> Polynomial<i64> {
+pub fn poly_intt(poly: &Polynomial<i64>, zetas: Vec<i64>) -> Polynomial<i64> {
     let mut coeffs = poly.coeffs().to_vec(); // Convert slice to Vec<i64>
-    coeffs.resize(n, 0); // Ensure uniform length
-    Polynomial::new(intt(&coeffs, omega, n, q))
+    coeffs.resize(256, 0); // Ensure uniform length
+    let mut l = 2;
+	let mut k = 127;
+	while l <= 128 {
+		let mut start = 0;
+		while start < 256 {
+			let zeta = zetas[k];
+			k = k-1;
+			for j in start..start+l {
+				let t = coeffs[j];
+				coeffs[j] = (t+coeffs[j+l]).rem_euclid(3329);
+				coeffs[j+l] = (zeta*(coeffs[j+l]-t)).rem_euclid(3329);
+			}
+			start += 2*l;
+		}
+		l <<= 1;
+	}
+	for j in 0..256 {
+		coeffs[j] = (coeffs[j]*3303).rem_euclid(3329); //3303 is 128^-1 mod 3329
+	
+	}
+	Polynomial::new(coeffs)
+}
+
+/// Multiplies two elements in Z_q[x]/(x^2-zeta).
+/// The NTT space is a direct product of 128 such rings.
+///
+/// # Arguments
+/// * `a0` - a0+a1*x is one factor.
+/// * `a1`
+/// * `b0` - b0+b1*x is the other factor.
+/// * `b1`
+/// * `zeta` - x^2-zeta is the modulus of the ring.
+///
+/// # Returns
+/// * (r0: i64, r1: i64) - r0+r1*x is the product in Z_q[x]/(x^2-zeta).
+pub fn ntt_base_multiplication(a0:i64 , a1:i64, b0:i64, b1:i64, zeta:i64) -> (i64, i64) {
+	let r0 = (a0*b0+zeta*a1*b1).rem_euclid(3329);
+	let r1 = (a1*b0+a0*b1).rem_euclid(3329);
+	(r0, r1)
+}
+
+/// Multiplies two elements of the NTT space to produce another element of the NTT space.
+///
+/// # Arguments
+/// * `f` - One NTT polynomial to be multiplied.
+/// * `g` - The other NTT polynomial to be multiplied.
+/// * `zetas` - Precomputed root of unity powers.
+///
+/// # Returns
+/// * Polynomial<i64> - The product in the NTT space.
+pub fn ntt_coefficient_multiplication(f: Polynomial<i64>, g: Polynomial<i64>, zetas: Vec<i64>) -> Polynomial<i64> {
+	let mut new_coeffs = vec![];
+	let mut f_coeffs = f.coeffs().to_vec();
+	f_coeffs.resize(256,0); // Ensure uniform length
+	let mut g_coeffs = g.coeffs().to_vec();
+	g_coeffs.resize(256,0); // Ensure uniform length
+	
+	// Multiply in each of the 128 Z_q[x]/(x^2-zeta) factors
+	for i in 0..64 {
+		let (r0,r1) = ntt_base_multiplication(
+			f_coeffs[4*i+0],
+			f_coeffs[4*i+1],
+			g_coeffs[4*i+0],
+			g_coeffs[4*i+1],
+			zetas[64+i]);
+		let (r2,r3) = ntt_base_multiplication(
+			f_coeffs[4*i+2],
+			f_coeffs[4*i+3],
+			g_coeffs[4*i+2],
+			g_coeffs[4*i+3],
+			-zetas[64+i]);
+		new_coeffs.append(&mut vec![r0,r1,r2,r3]);
+	}
+	Polynomial::new(new_coeffs)
 }
