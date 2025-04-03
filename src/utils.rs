@@ -9,7 +9,6 @@ use aes_ctr_drbg::DrbgCtx;
 use num_bigint::BigUint;
 use num_traits::Zero;
 use ntt::mod_exp;
-use ring_lwe::utils::polyadd;
 
 
 /// default parameters for module-LWE
@@ -62,14 +61,52 @@ pub fn mod_coeffs(poly: Polynomial<i64>, q: i64) -> Polynomial<i64> {
 	let coeffs = poly.coeffs();
 	let mut mod_coeffs = vec![];
 	if coeffs.len() == 0 {
-		// return original input for the zero polynomial
-		return poly
+		return poly // return original input for the zero polynomial
 	} else {
 		for i in 0..coeffs.len() {
 			mod_coeffs.push(coeffs[i].rem_euclid(q));
 		}
 	}
 	Polynomial::new(mod_coeffs)
+}
+
+/// Add two polynomials
+/// # Arguments:
+///	* `x` - polynomial to be added
+/// * `y` - polynomial to be added.
+/// * `q` - coefficient modulus.
+///	* `f` - polynomial modulus.
+/// # Returns:
+///	polynomial in Z_modulus[X]/(f)
+pub fn polyadd(x : &Polynomial<i64>, y : &Polynomial<i64>, q : i64, f : &Polynomial<i64>) -> Polynomial<i64> {
+	let mut r = x+y;
+    r = polyrem(r,f);
+    if q != 0 {
+        mod_coeffs(r, q)
+    }
+    else{
+        r
+    }
+}
+
+/// Polynomial remainder of x modulo f assuming f=x^n+1
+/// # Arguments:
+/// * `g` - polynomial in Z[X]
+///	* `f` - polynomial modulus
+/// # Returns:
+/// polynomial in Z[X]/(f)
+pub fn polyrem(g: Polynomial<i64>, f: &Polynomial<i64>) -> Polynomial<i64> {
+	let n = f.coeffs().len()-1;
+	let mut coeffs = g.coeffs().to_vec();
+	if coeffs.len() < n+1 {
+		return Polynomial::new(coeffs)
+	} else{
+		for i in n..coeffs.len() {
+			coeffs[i % n] = coeffs[i % n]+(-1 as i64).pow((i/n).try_into().unwrap())*coeffs[i];
+		}
+		coeffs.resize(n,0);
+		Polynomial::new(coeffs)
+	}
 }
 
 /// Computes the bit-reversal of an unsigned `k`-bit integer `i`.
