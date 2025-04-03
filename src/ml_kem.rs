@@ -296,4 +296,63 @@ impl MLKEM {
         Ok((shared_k, c))
     }
 
+    /// Uses the decapsulation key to produce a shared secret key from a
+    /// ciphertext following Algorithm 18 (FIPS 203)
+    /// 
+    /// # Arguments
+    /// `dk` - decapsulation key
+    /// `c` - 32*(d_u*k+d_v)-byte ciphertext 
+    /// # Returns
+    /// `Vec<u8> - decapulated key
+    pub fn _decaps_internal(&self, dk: Vec<u8>, c: Vec<u8>) -> Result<Vec<u8>, String>{
+        Ok(vec![]) // Placeholder return value
+    }
+
+    /*
+    # NOTE: ML-KEM requires input validation before returning the result of
+    # decapsulation. These are performed by the following three checks:
+    #
+    # 1) Ciphertext type check: the byte length of c must be correct
+    # 2) Decapsulation type check: the byte length of dk must be correct
+    # 3) Hash check: a hash of the internals of the dk must match
+
+    # Unlike encaps, these are easily performed in the kem decaps
+    if len(c) != 32 * (self.du * self.k + self.dv):
+        raise ValueError(
+            f"ciphertext type check failed. Expected {32 * (self.du * self.k + self.dv)} bytes and obtained {len(c)}"
+        )
+    if len(dk) != 768 * self.k + 96:
+        raise ValueError(
+            f"decapsulation type check failed. Expected {768 * self.k + 96} bytes and obtained {len(dk)}"
+        )
+
+    # Parse out data from dk
+    dk_pke = dk[0 : 384 * self.k]
+    ek_pke = dk[384 * self.k : 768 * self.k + 32]
+    h = dk[768 * self.k + 32 : 768 * self.k + 64]
+    z = dk[768 * self.k + 64 :]
+
+    # Ensure the hash-check passes
+    if self._H(ek_pke) != h:
+        raise ValueError("hash check failed")
+
+    # Decrypt the ciphertext
+    m_prime = self._k_pke_decrypt(dk_pke, c)
+
+    # Re-encrypt the recovered message
+    K_prime, r_prime = self._G(m_prime + h)
+    K_bar = self._J(z + c)
+
+    # Here the public encapsulation key is read from the private
+    # key and so we never expect this to fail the TypeCheck or
+    # ModulusCheck
+    c_prime = self._k_pke_encrypt(ek_pke, m_prime, r_prime)
+
+    # If c != c_prime, return K_bar as garbage
+    # WARNING: for proper implementations, it is absolutely
+    # vital that the selection between the key and garbage is
+    # performed in constant time
+    return select_bytes(K_bar, K_prime, c == c_prime)
+    */
+
 }

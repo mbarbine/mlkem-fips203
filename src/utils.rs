@@ -56,6 +56,30 @@ impl Default for Parameters {
     }
 }
 
+/// Selects between the bytes in `a` or `b` based on `cond`.
+///
+/// If `cond` is `false`, returns `a`. If `cond` is `true`, returns `b`.
+///
+/// # Examples
+/// ```
+/// use ml_kem::utils::select_bytes;
+/// let a = vec![10, 20, 30];
+/// let b = vec![100, 110, 120];
+///
+/// assert_eq!(select_bytes(&a, &b, false), a);
+/// assert_eq!(select_bytes(&a, &b, true), b);
+/// ```
+pub fn select_bytes(a: &[u8], b: &[u8], cond: bool) -> Vec<u8> {
+    assert_eq!(a.len(), b.len(), "Input slices must have the same length");
+
+    let cw = if cond { 0xFF } else { 0x00 };
+
+    a.iter()
+        .zip(b.iter())
+        .map(|(&a_byte, &b_byte)| a_byte ^ (cw & (a_byte ^ b_byte)))
+        .collect()
+}
+
 /// function to ensure coefficients are in [0,q-1] after taking remainders
 /// # Arguments
 /// * `poly` - polynomial to mod
