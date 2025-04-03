@@ -57,17 +57,22 @@ impl Default for Parameters {
 }
 
 /// function to ensure coefficients are in [0,q-1] after taking remainders
+/// # Arguments
+/// * `poly` - polynomial to mod
+/// * `q` - modulus
+/// # Returns
+/// `Polynomial<i64>` - polynomial with coefficients in [0,q-1]
 pub fn mod_coeffs(poly: Polynomial<i64>, q: i64) -> Polynomial<i64> {
 	let coeffs = poly.coeffs();
-	let mut mod_coeffs = vec![];
+	let mut new_coeffs = vec![];
 	if coeffs.len() == 0 {
 		return poly // return original input for the zero polynomial
 	} else {
 		for i in 0..coeffs.len() {
-			mod_coeffs.push(coeffs[i].rem_euclid(q));
+			new_coeffs.push(coeffs[i].rem_euclid(q));
 		}
 	}
-	Polynomial::new(mod_coeffs)
+	Polynomial::new(new_coeffs)
 }
 
 /// Add two polynomials
@@ -81,19 +86,36 @@ pub fn mod_coeffs(poly: Polynomial<i64>, q: i64) -> Polynomial<i64> {
 pub fn polyadd(x : &Polynomial<i64>, y : &Polynomial<i64>, q : i64, f : &Polynomial<i64>) -> Polynomial<i64> {
 	let mut r = x+y;
     r = polyrem(r,f);
-    if q != 0 {
-        mod_coeffs(r, q)
-    }
-    else{
-        r
-    }
+    mod_coeffs(r, q)
 }
 
+/// Subtract two polynomials
+/// # Arguments
+///	* `x` - polynomial to be subtracted
+/// * `y` - polynomial to be subtracted.
+/// * `q` - coefficient modulus.
+///	* `f` - polynomial modulus.
+/// # Returns
+///	polynomial in Z_modulus[X]/(f)
+pub fn polysub(x : &Polynomial<i64>, y : &Polynomial<i64>, q: i64, f : &Polynomial<i64>) -> Polynomial<i64> {
+	polyadd(x, &polyinv(y, q), q, f)
+}
+
+/// Additive inverse of a polynomial
+/// # Arguments
+///	* `x` - polynomial to be inverted
+/// * `q` - coefficient modulus.
+/// # Returns
+///	polynomial in Z_modulus[X]
+pub fn polyinv(x : &Polynomial<i64>, q: i64) -> Polynomial<i64> {
+    mod_coeffs(-x, q)
+  }
+
 /// Polynomial remainder of x modulo f assuming f=x^n+1
-/// # Arguments:
+/// # Arguments
 /// * `g` - polynomial in Z[X]
 ///	* `f` - polynomial modulus
-/// # Returns:
+/// # Returns
 /// polynomial in Z[X]/(f)
 pub fn polyrem(g: Polynomial<i64>, f: &Polynomial<i64>) -> Polynomial<i64> {
 	let n = f.coeffs().len()-1;
@@ -1116,6 +1138,23 @@ pub fn ntt_multiplication(f: Polynomial<i64>, g: Polynomial<i64>, zetas: Vec<i64
 	g_coeffs.resize(256,0); 
 	let new_coeffs = ntt_coefficient_multiplication(f_coeffs, g_coeffs, zetas);
 	Polynomial::new(new_coeffs)
+}
+
+/// add two vectors of polynomials
+/// # Arguments
+/// * `v0` - vector of polynomials
+/// * `v1` - vector of polynomials
+/// * `q` - modulus
+/// * `f` - polynomial modulus
+/// # Returns
+/// * `result` - vector of polynomials
+pub fn add_vec(v0: &Vec<Polynomial<i64>>, v1: &Vec<Polynomial<i64>>, q: i64, f: &Polynomial<i64>) -> Vec<Polynomial<i64>> {
+	assert!(v0.len() == v1.len());
+	let mut result = vec![];
+	for i in 0..v0.len() {
+		result.push(polyadd(&v0[i], &v1[i], q, &f));
+	}
+	result
 }
 
 /// take the dot product of two vectors of polynomials
