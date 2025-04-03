@@ -29,7 +29,7 @@ impl MLKEM {
     /// and `e`, and computes the public key (`ek_pke`) and the private key (`dk_pke`).
     ///
     /// # Arguments
-    /// * `d` - The input parameter (likely a domain or identifier) to seed the key generation.
+    /// * `d` - The input parameter to seed the key generation.
     ///
     /// # Returns
     /// * A tuple containing:
@@ -238,6 +238,25 @@ impl MLKEM {
         let m = encode_poly(&compress_poly(&w,1),1);
 
         m
+
+    }
+
+    /// Use randomness to generate an encapsulation key and a corresponding
+    /// decapsulation key following Algorithm 16 (FIPS 203)
+    ///
+    /// # Arguments
+    /// * `d` - The input parameter to seed the key generation.
+    /// * `z` - input parameter [TBD]
+    /// # Returns
+    /// `(Vec<u8>, Vec<u8>)` - type of byte arrays (ek, dk)
+    pub fn _keygen_internal(&self, d: Vec<u8>, z: Vec<u8>){
+        
+        (ek_pke, dk_pke) = self._k_pke_keygen(d);
+
+        let ek = ek_pke;
+        let dk = [dk_pke, ek, hash_h(ek), z].concat()
+
+        (ek, dk)
 
     }
 
