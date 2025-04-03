@@ -264,7 +264,7 @@ impl MLKEM {
         let (ek_pke, dk_pke) = self._k_pke_keygen(d);
 
         let ek = ek_pke;
-        let dk = [dk_pke, ek, hash_h(ek), z].concat();
+        let dk = [dk_pke, ek.clone(), hash_h(ek.clone()), z].concat();
 
         (ek, dk)
     }
