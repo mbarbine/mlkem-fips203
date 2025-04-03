@@ -1,4 +1,4 @@
-use crate::utils::{Parameters, hash_g, hash_h, generate_matrix_from_seed, generate_error_vector, generate_polynomial, encode_vector, vec_ntt, vec_intt, poly_intt, decode_vector, encode_poly, decode_poly, decompress_poly, compress_poly, compress_vec,mul_mat_vec_simple,mul_vec_simple, decompress_vec, polyadd, polysub, add_vec};
+use crate::utils::{Parameters, hash_g, hash_h, hash_j, generate_matrix_from_seed, generate_error_vector, generate_polynomial, encode_vector, vec_ntt, vec_intt, poly_intt, decode_vector, encode_poly, decode_poly, decompress_poly, compress_poly, compress_vec,mul_mat_vec_simple,mul_vec_simple, decompress_vec, polyadd, polysub, add_vec, select_bytes};
 use aes_ctr_drbg::DrbgCtx;
 
 pub struct MLKEM {
@@ -98,7 +98,7 @@ impl MLKEM {
     ///
     /// # Returns
     ///
-    /// A vector of bytes representing the encrypted ciphertext.
+    /// `Vec<u8>` - A vector of bytes `c` representing the encrypted ciphertext.
     /// 
     /// # Example
     /// ```
@@ -294,6 +294,93 @@ impl MLKEM {
         let c = self._k_pke_encrypt(ek, m, r)?; // Propagate error with `?`
     
         Ok((shared_k, c))
+    }
+
+    /// Uses the decapsulation key to produce a shared secret key from a
+    /// ciphertext following Algorithm 18 (FIPS 203)
+    /// 
+    /// # Arguments
+    /// `dk` - (768*k+96)-byte decapsulation key
+    /// `c` - 32*(d_u*k+d_v)-byte ciphertext 
+    /// # Returns
+    /// `Vec<u8> - 32 byte decapulated shared key
+    /// # Examples
+    /// ```
+    /// let params = ml_kem::utils::Parameters::default();
+    /// let mlkem = ml_kem::ml_kem::MLKEM::new(params);
+    /// let d = vec![0x00; 32];
+    /// let z = vec![0x01; 32];
+    /// let m = vec![0x02; 32];
+    /// let (ek, dk) = mlkem._keygen_internal(d,z);
+    /// let (shared_k,c) = match mlkem._encaps_internal(ek,m) {
+    ///    Ok(ciphertext) => ciphertext,
+    ///    Err(e) => panic!("Encryption failed: {}", e),
+    /// };
+    /// let shared_k_decaps = match mlkem._decaps_internal(dk,c) {
+    ///    Ok(decapsulated_shared_key) => decapsulated_shared_key,
+    ///    Err(e) => panic!("Encryption failed: {}", e),
+    /// };
+    /// assert_eq!(shared_k, shared_k_decaps);
+    /// ```
+    pub fn _decaps_internal(&self, dk: Vec<u8>, c: Vec<u8>) -> Result<Vec<u8>, String>{
+
+        // NOTE: ML-KEM requires input validation before returning the result of
+        // decapsulation. These are performed by the following three checks:
+        //
+        // 1) Ciphertext type check: the byte length of c must be correct
+        // 2) Decapsulation type check: the byte length of dk must be correct
+        // 3) Hash check: a hash of the internals of the dk must match
+        //
+        // Unlike encaps, these are easily performed in the kem decaps
+
+        if c.len() != 32 * (self.params.du * self.params.k + self.params.dv) {
+            return Err(format!(
+                "ciphertext type check failed. Expected {} bytes and obtained {}",
+                32 * (self.params.du * self.params.k + self.params.dv),
+                c.len()
+            ));
+        }
+
+        if dk.len() != 768 * self.params.k + 96{
+            return Err(format!(
+                "decapsulation type check failed. Expected {} bytes and obtained {}",
+                768 * self.params.k + 96,
+                dk.len()
+            ));
+        }
+
+        // Parse out data from dk as Vec<u8>
+        let dk_pke = dk[0..384 * self.params.k].to_vec();
+        let ek_pke = dk[384 * self.params.k..768 * self.params.k + 32].to_vec();
+        let h = dk[768 * self.params.k + 32..768 * self.params.k + 64].to_vec();
+        let z = dk[768 * self.params.k + 64..].to_vec();
+
+        // Ensure the hash-check passes
+        if hash_h(ek_pke.clone()) != h{
+            return Err("hash check failed".to_string());
+        }
+
+        // Decrypt the ciphertext
+        let m_prime = self._k_pke_decrypt(dk_pke, c.clone());
+
+        // Re-encrypt the recovered message
+        let (k_prime, r_prime) = hash_g([m_prime.clone(),h].concat());
+        let k_bar = hash_j([z,c.clone()].concat());
+
+        // Here the public encapsulation key is read from the private
+        // key and so we never expect this to fail the TypeCheck or ModulusCheck
+        let c_prime = match self._k_pke_encrypt(ek_pke.clone(), m_prime.clone(), r_prime.clone()) {
+            Ok(ciphertext) => ciphertext,
+            Err(e) => panic!("Encryption failed: {}", e),
+        };
+
+        // If c != c_prime, return K_bar as garbage
+        // WARNING: for proper implementations, it is absolutely
+        // vital that the selection between the key and garbage is
+        // performed in constant time
+        let shared_k = select_bytes(&k_bar, &k_prime, c == c_prime);
+
+        Ok(shared_k)
     }
 
 }
