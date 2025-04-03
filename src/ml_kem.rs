@@ -1,4 +1,4 @@
-use crate::utils::{Parameters, hash_g, generate_matrix_from_seed, generate_error_vector, generate_polynomial, encode_vector, vec_ntt, vec_intt, poly_intt, decode_vector, encode_poly, decode_poly, decompress_poly, compress_poly, compress_vec,mul_mat_vec_simple,mul_vec_simple, decompress_vec, polyadd, polysub, add_vec};
+use crate::utils::{Parameters, hash_g, hash_h, generate_matrix_from_seed, generate_error_vector, generate_polynomial, encode_vector, vec_ntt, vec_intt, poly_intt, decode_vector, encode_poly, decode_poly, decompress_poly, compress_poly, compress_vec,mul_mat_vec_simple,mul_vec_simple, decompress_vec, polyadd, polysub, add_vec};
 use aes_ctr_drbg::DrbgCtx;
 
 pub struct MLKEM {
@@ -245,19 +245,28 @@ impl MLKEM {
     /// decapsulation key following Algorithm 16 (FIPS 203)
     ///
     /// # Arguments
-    /// * `d` - The input parameter to seed the key generation.
-    /// * `z` - input parameter [TBD]
+    /// * `d` - 32 bytes of randomness to seed the key generation
+    /// * `z` - 32 bytes of randomness to seed the key generation
     /// # Returns
-    /// `(Vec<u8>, Vec<u8>)` - type of byte arrays (ek, dk)
-    pub fn _keygen_internal(&self, d: Vec<u8>, z: Vec<u8>){
+    /// `(Vec<u8>, Vec<u8>)` - encapsulation key and decapsulation key (ek, dk)
+    /// # Examples
+    /// ```
+    /// use ml_kem::utils::{Parameters,encode_poly,generate_polynomial,compress_poly};
+    /// use ml_kem::ml_kem::MLKEM;
+    /// let params = Parameters::default();
+    /// let mlkem = MLKEM::new(params);
+    /// let d = vec![0x00; 32];
+    /// let z = vec![0x01; 32];
+    /// let (ek, dk) = mlkem._keygen_internal(d,z);
+    /// ```
+    pub fn _keygen_internal(&self, d: Vec<u8>, z: Vec<u8>) -> (Vec<u8>, Vec<u8>) {
         
-        (ek_pke, dk_pke) = self._k_pke_keygen(d);
+        let (ek_pke, dk_pke) = self._k_pke_keygen(d);
 
         let ek = ek_pke;
-        let dk = [dk_pke, ek, hash_h(ek), z].concat()
+        let dk = [dk_pke, ek, hash_h(ek), z].concat();
 
         (ek, dk)
-
     }
 
 }
