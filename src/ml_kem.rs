@@ -289,11 +289,11 @@ impl MLKEM {
     /// };
     /// ```
     pub fn _encaps_internal(&self, ek: Vec<u8>, m: Vec<u8>) -> Result<(Vec<u8>, Vec<u8>), String> {
-        let (shared_key, r) = hash_g([m.clone(), hash_h(ek.clone())].concat());
+        let (shared_k, r) = hash_g([m.clone(), hash_h(ek.clone())].concat());
     
         let c = self._k_pke_encrypt(ek, m, r)?; // Propagate error with `?`
     
-        Ok((shared_key, c))
+        Ok((shared_k, c))
     }
 
 }
