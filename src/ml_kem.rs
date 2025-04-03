@@ -376,7 +376,7 @@ impl MLKEM {
         // performed in constant time
         let shared_k = select_bytes(&k_bar, &k_prime, c == c_prime);
 
-        Ok(shared_k) // Placeholder return value
+        Ok(shared_k)
     }
 
 }
