@@ -61,8 +61,13 @@ impl Default for Parameters {
 pub fn mod_coeffs(poly: Polynomial<i64>, q: i64) -> Polynomial<i64> {
 	let coeffs = poly.coeffs();
 	let mut mod_coeffs = vec![];
-	for i in 0..coeffs.len() {
-		mod_coeffs.push(coeffs[i].rem_euclid(q));
+	if coeffs.len() == 0 {
+		// return original input for the zero polynomial
+		return poly
+	} else {
+		for i in 0..coeffs.len() {
+			mod_coeffs.push(coeffs[i].rem_euclid(q));
+		}
 	}
 	Polynomial::new(mod_coeffs)
 }
@@ -591,8 +596,9 @@ pub fn generate_polynomial(
 /// assert_eq!(encoded.len(), 384); // 32 * d (d = 12)
 /// ```
 pub fn encode_poly(poly: &Polynomial<i64>, d: usize) -> Vec<u8> {
-    let mut t = BigUint::zero(); // Start with a BigUint initialized to zero
-    let mut coeffs = poly.coeffs().to_vec(); // get the coefficients of the polynomial
+    let poly_mod = mod_coeffs(poly.clone(), 3329);
+	let mut t = BigUint::zero(); // Start with a BigUint initialized to zero
+    let mut coeffs = poly_mod.coeffs().to_vec(); // get the coefficients of the polynomial
     coeffs.resize(256, 0); // ensure they're the right size
 
     for i in 0..255 {
@@ -647,7 +653,7 @@ pub fn decode_poly(input_bytes: Vec<u8>, d: usize) -> Polynomial<i64> {
 	// Form bits into integer coefficients
 	for i in 0..256 {
 		for j in 0..d {	
-			coeffs[i] += (b[i*d+j] as i64)*(1 << j) % m;
+			coeffs[i] = (coeffs[i]+(b[i*d+j] as i64)*(1 << j)) % m;
 		}
 	}
 	Polynomial::new(coeffs)
@@ -729,7 +735,7 @@ pub fn decode_vector(input_bytes: &Vec<u8>, k: usize, d: usize) -> Vec<Polynomia
 /// * `i64` - compressed integer
 fn compress_ele(x: i64, d: usize) -> i64 {
     let t = 1 << d;
-    let y = (t * x + 1664) / 3329; // n.b. 1664 = 3329 / 2
+    let y = (t * x.rem_euclid(3329) + 1664) / 3329; // n.b. 1664 = 3329 / 2
     y % t
 }
 
@@ -1133,7 +1139,7 @@ pub fn mul_vec_simple(v0: &Vec<Polynomial<i64>>, v1: &Vec<Polynomial<i64>>, q: i
 	for i in 0..v0.len() {
 		result = polyadd(&result, &ntt_multiplication(v0[i].clone(), v1[i].clone(), zetas.clone()), q, &f);
 	}
-	result
+	mod_coeffs(result, q)
 }
 
 /// multiply a matrix by a vector of polynomials

@@ -106,6 +106,7 @@ impl MLKEM {
     /// ```
     /// use ml_kem::ml_kem::MLKEM;
     /// use ml_kem::utils::{Parameters,encode_poly,compress_poly, generate_polynomial};
+    /// let params = Parameters::default();
     /// let mlkem = MLKEM::new(params);
     /// use ring_lwe::utils::gen_uniform_poly;
     /// let d = vec![0x01, 0x02, 0x03, 0x04];
@@ -199,7 +200,7 @@ impl MLKEM {
     /// # Examples
     /// ```
     /// use ml_kem::ml_kem::MLKEM;
-    /// use ml_kem::utils::{Parameters,encode_poly,generate_polynomial};
+    /// use ml_kem::utils::{Parameters,encode_poly,generate_polynomial,compress_poly};
     /// use ring_lwe::utils::gen_uniform_poly;
     /// let params = Parameters::default();
     /// let mlkem = MLKEM::new(params);
