@@ -345,20 +345,21 @@ impl MLKEM {
             ));
         }
 
-        // Parse out data from dk
-        let dk_pke = &dk[0..384 * self.params.k];
-        let ek_pke = &dk[384 * self.params.k..768 * self.params.k + 32];
-        let h = &dk[768 * self.params.k + 32..768 * self.params.k + 64];
-        let z = &dk[768 * self.params.k + 64..];
+        // Parse out data from dk as Vec<u8>
+        let dk_pke = dk[0..384 * self.params.k].to_vec();
+        let ek_pke = dk[384 * self.params.k..768 * self.params.k + 32].to_vec();
+        let h = dk[768 * self.params.k + 32..768 * self.params.k + 64].to_vec();
+        let z = dk[768 * self.params.k + 64..].to_vec();
+
+        // Ensure the hash-check passes
+        if hash_h(ek_pke) != h{
+            return Err("hash check failed".to_string());
+        }
 
         Ok(vec![]) // Placeholder return value
     }
 
     /*
-
-    # Ensure the hash-check passes
-    if self._H(ek_pke) != h:
-        raise ValueError("hash check failed")
 
     # Decrypt the ciphertext
     m_prime = self._k_pke_decrypt(dk_pke, c)
