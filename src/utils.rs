@@ -28,10 +28,6 @@ pub struct Parameters {
 	pub du: usize,
 	/// dv
 	pub dv: usize,
-    /// Standard deviation of the error
-    pub sigma: f64,
-	/// 2n-th root of unity	
-    pub omega: i64,
 	/// Polynomial modulus
     pub f: Polynomial<i64>,
 	/// generate random bytes
@@ -44,10 +40,8 @@ pub struct Parameters {
 impl Default for Parameters {
     fn default() -> Self {
         let n = 256;
-        let q = 12289;
+        let q = 3329;
         let k = 4;
-        let sigma = 3.19;
-		let omega = ntt::omega(q, 2*n);
 		let eta_1 = 3;
 		let eta_2 = 2;
 		let du = 10;
@@ -59,7 +53,7 @@ impl Default for Parameters {
         let zetas: Vec<i64> = (0..128)
         	.map(|i| mod_exp(17, bit_reverse(i, 7), 3329))
         	.collect();
-        Parameters { n, q, k, sigma, omega, eta_1, eta_2, du, dv, f, zetas, random_bytes: gen_random_bytes }
+        Parameters { n, q, k, eta_1, eta_2, du, dv, f, zetas, random_bytes: gen_random_bytes }
     }
 }
 
@@ -67,8 +61,13 @@ impl Default for Parameters {
 pub fn mod_coeffs(poly: Polynomial<i64>, q: i64) -> Polynomial<i64> {
 	let coeffs = poly.coeffs();
 	let mut mod_coeffs = vec![];
-	for i in 0..coeffs.len() {
-		mod_coeffs.push(coeffs[i].rem_euclid(q));
+	if coeffs.len() == 0 {
+		// return original input for the zero polynomial
+		return poly
+	} else {
+		for i in 0..coeffs.len() {
+			mod_coeffs.push(coeffs[i].rem_euclid(q));
+		}
 	}
 	Polynomial::new(mod_coeffs)
 }
@@ -391,36 +390,8 @@ pub fn generate_matrix_from_seed(
     }
 }
 
-/// Convert a vector of bytes into a vector of bits
-/// 
-/// # Arguments
-/// 
-/// * `bytes` - a vector of bytes
-/// 
-/// # Returns 
-///
-/// * Vec<u8> - a vector of bits
-///
-/// # Example
-/// ```
-/// use ml_kem::utils::bytes_to_bits;
-/// let bytes = vec![15, 200];
-/// let bits = bytes_to_bits(bytes);
-/// assert_eq!(bits, vec![1,1,1,1,0,0,0,0,0,0,0,1,0,0,1,1]);
-/// ```
-pub fn bytes_to_bits(bytes: Vec<u8>) -> Vec<u8> {
-	let mut bits = vec![0; bytes.len()*8];
-	let mut c = bytes;
-	for i in 0..c.len() {
-		for j in 0..8 {
-			bits[8*i+j] = c[i] % 2;
-			c[i] = c[i]/2;
-		}
-	}
-	bits
-}
-
 /// Generates a polynomial from bytes via the centered binomial distribution
+/// following Algorithm 6 of FIPS 203.
 /// 
 /// # Arguments
 /// 
@@ -445,14 +416,14 @@ pub fn bytes_to_bits(bytes: Vec<u8>) -> Vec<u8> {
 pub fn cbd(input_bytes: Vec<u8>, eta: usize, n:usize) -> Polynomial<i64> {
 	assert_eq!(eta*n/4, input_bytes.len(), "input length must be eta*n/4");
 	let mut coefficients = vec![0;n];
-	let bits = bytes_to_bits(input_bytes);
+	let mut t = BigUint::from_bytes_le(&input_bytes);
+	let mask = BigUint::from((1 << eta)-1 as u64);
+	let mask2 = BigUint::from((1 << 2*eta)-1 as u64);
 	for i in 0..n {
-		let mut a = 0i64;
-		let mut b = 0i64;
-		for j in 0..eta {
-			a += bits[2*i*eta+j] as i64;
-			b += bits[2*i*eta+eta+j] as i64;
-		}
+		let x = t.clone() & mask2.clone();
+		let a = (x.clone() & mask.clone()).count_ones() as i64;
+		let b = ((x.clone() >> eta) & mask.clone()).count_ones() as i64;
+		t >>= 2*eta;
 		coefficients[i] = a-b;
 	}
 	Polynomial::new(coefficients)
@@ -596,16 +567,19 @@ pub fn generate_polynomial(
 /// assert_eq!(encoded.len(), 384); // 32 * d (d = 12)
 /// ```
 pub fn encode_poly(poly: &Polynomial<i64>, d: usize) -> Vec<u8> {
-    let mut t = BigUint::zero(); // Start with a BigUint initialized to zero
+    let poly_mod = mod_coeffs(poly.clone(), 3329);
+	let mut t = BigUint::zero(); // Start with a BigUint initialized to zero
+    let mut coeffs = poly_mod.coeffs().to_vec(); // get the coefficients of the polynomial
+    coeffs.resize(256, 0); // ensure they're the right size
 
     for i in 0..255 {
         // OR the current coefficient then left shift by d bits
-        t |= BigUint::from(poly.coeffs()[256 - i - 1] as u64); // Use BigUint for coefficients
+        t |= BigUint::from(coeffs[256 - i - 1] as u64); // Use BigUint for coefficients
         t <<= d; // Equivalent to t = t * 2^d
     }
 
     // Add the last coefficient
-    t |= BigUint::from(poly.coeffs()[0] as u64);
+    t |= BigUint::from(coeffs[0] as u64);
 
     // Convert BigUint to a byte vector
     let byte_len = 32 * d;
@@ -646,12 +620,15 @@ pub fn decode_poly(input_bytes: Vec<u8>, d: usize) -> Polynomial<i64> {
 	}
 	
 	let mut coeffs = vec![0; 256];
-	let b = bytes_to_bits(input_bytes);
-	// Form bits into integer coefficients
+	let mut b_int = BigUint::from_bytes_le(&input_bytes);
+	let mask = BigUint::from((1 << d) - 1 as u64);
+	// Form bits from big unsigned integer into integer coefficients
 	for i in 0..256 {
-		for j in 0..d {	
-			coeffs[i] += (b[i*d+j] as i64)*(1 << j) % m;
+		let bits_vec = (b_int.clone() & mask.clone()).to_u64_digits();
+		if bits_vec.len() > 0 {
+			coeffs[i] = bits_vec[0] as i64 % m;
 		}
+		b_int >>= d; // Right shift d bits
 	}
 	Polynomial::new(coeffs)
 }
@@ -709,10 +686,10 @@ pub fn encode_vector(v: &Vec<Polynomial<i64>>, d: usize) -> Vec<u8> {
 /// let (p1, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, Some(3329));
 /// let polys = vec![p0, p1];
 /// let encoded_bytes = encode_vector(&polys, 12);
-/// let decoded = decode_vector(&encoded_bytes, 2, 12, false);
+/// let decoded = decode_vector(&encoded_bytes, 2, 12);
 /// assert_eq!(polys, decoded);
 /// ```
-pub fn decode_vector(input_bytes: &Vec<u8>, k: usize, d: usize, _from_ntt: bool) -> Vec<Polynomial<i64>> {
+pub fn decode_vector(input_bytes: &Vec<u8>, k: usize, d: usize) -> Vec<Polynomial<i64>> {
 	assert_eq!(256*d*k, input_bytes.len()*8, "256*d*k must be length of input bytes times 8");	
 	let mut v = vec![Polynomial::new(vec![]); k];
 	for i in 0..k {
@@ -732,7 +709,7 @@ pub fn decode_vector(input_bytes: &Vec<u8>, k: usize, d: usize, _from_ntt: bool)
 /// * `i64` - compressed integer
 fn compress_ele(x: i64, d: usize) -> i64 {
     let t = 1 << d;
-    let y = (t * x + 1664) / 3329; // n.b. 1664 = 3329 / 2
+    let y = (t * x.rem_euclid(3329) + 1664) / 3329; // n.b. 1664 = 3329 / 2
     y % t
 }
 
@@ -796,6 +773,26 @@ pub fn compress_vec(v: &Vec<Polynomial<i64>>, d: usize) -> Vec<Polynomial<i64>> 
     v.iter().map(|poly| compress_poly(poly, d)).collect()
 }
 
+/// compress each polynomial in a vector of polynomials
+///
+/// # Example
+/// ```
+/// use ml_kem::utils::{generate_polynomial,compress_vec,decompress_vec};
+/// let sigma = vec![0u8; 32];
+/// let eta = 3;
+/// let n = 0;
+/// let poly_size = 256;
+/// let (p0, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, Some(3329));
+/// let (p1, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, Some(3329));
+/// let v = vec![p0, p1];
+/// let compress_v = compress_vec(&v, 12);
+/// let recovered_v = decompress_vec(&compress_v,12);
+/// assert_eq!(v,recovered_v);
+/// ```
+pub fn decompress_vec(v: &Vec<Polynomial<i64>>, d: usize) -> Vec<Polynomial<i64>> {
+    v.iter().map(|poly| decompress_poly(poly, d)).collect()
+}
+
 
 /// Decompress the polynomial by decompressing each coefficient
 /// 
@@ -838,9 +835,7 @@ pub fn decompress_poly(poly: &Polynomial<i64>, d: usize) -> Polynomial<i64> {
 /// # Arguments
 ///
 /// * `v` - A reference to a vector of `Polynomial<i64>`, representing the input polynomials.
-/// * `omega` - The primitive root of unity used for the NTT.
-/// * `n` - The expected number of coefficients in each polynomial.
-/// * `q` - The modulus used for NTT computations.
+/// * `zetas` - The powers of roots of unity used for the NTT.
 ///
 /// # Returns
 ///
@@ -876,9 +871,7 @@ pub fn vec_ntt(v: &Vec<Polynomial<i64>>, zetas: Vec<i64>) -> Vec<Polynomial<i64>
 /// # Arguments
 ///
 /// * `v` - A reference to a vector of `Polynomial<i64>`, representing the input polynomials.
-/// * `omega` - The primitive root of unity used for the NTT.
-/// * `n` - The expected number of coefficients in each polynomial.
-/// * `q` - The modulus used for NTT computations.
+/// * `zetas` - The powers of roots of unity used for the NTT.
 ///
 /// # Returns
 ///
@@ -1094,7 +1087,7 @@ pub fn ntt_multiplication(f: Polynomial<i64>, g: Polynomial<i64>, zetas: Vec<i64
 /// * `v1` - vector of polynomials
 /// * `modulus` - modulus
 /// * `poly_mod` - polynomial modulus
-/// * `omega` - 2nth root of unity
+/// * `zetas` - powers of roots of unity for NTT
 /// # Returns
 /// * `result` - polynomial
 /// 
@@ -1120,7 +1113,7 @@ pub fn mul_vec_simple(v0: &Vec<Polynomial<i64>>, v1: &Vec<Polynomial<i64>>, q: i
 	for i in 0..v0.len() {
 		result = polyadd(&result, &ntt_multiplication(v0[i].clone(), v1[i].clone(), zetas.clone()), q, &f);
 	}
-	result
+	mod_coeffs(result, q)
 }
 
 /// multiply a matrix by a vector of polynomials
@@ -1129,7 +1122,7 @@ pub fn mul_vec_simple(v0: &Vec<Polynomial<i64>>, v1: &Vec<Polynomial<i64>>, q: i
 /// * `v` - vector of polynomials
 /// * `modulus` - modulus
 /// * `poly_mod` - polynomial modulus
-/// * `omega` - 2nth root of unity
+/// * `zetas` - powers of roots of unity for NTT
 /// # Returns
 /// * `result` - vector of polynomials
 /// # Examples
