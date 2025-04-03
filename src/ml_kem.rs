@@ -269,4 +269,23 @@ impl MLKEM {
         (ek, dk)
     }
 
+    /// Uses the encapsulation key and randomness to generate a key and an
+    /// associated ciphertext following Algorithm 17 (FIPS 203)
+    /// 
+    /// # Arguemnts
+    /// * `ek` - (384*k+32)-byte encoded encapsulation key
+    /// * `m` - 32 bytes of randomness
+    /// # Returns
+    /// `(Vec<u8>, Vec<u8>)` - (32 byte shared key `K`, 32*(d_u*k+d_v)-byte ciphertext `c`)
+    /// # Examples
+    pub fn _encaps_internal(&self, ek: Vec<u8>, m: Vec<u8>){
+        let (K, r) = hash_g([m,hash_h(ek)].concat());
+
+        let c = self._k_pke_encrypt(ek, m, r).unwrap_or_else(|e| {
+            println!("Validation of encapsulation key failed: {}", e);
+        });
+
+        (K, c)
+    }
+
 }
