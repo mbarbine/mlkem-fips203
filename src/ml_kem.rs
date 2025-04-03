@@ -314,9 +314,13 @@ impl MLKEM {
     /// let (ek, dk) = mlkem._keygen_internal(d,z);
     /// let (shared_k,c) = match mlkem._encaps_internal(ek,m) {
     ///    Ok(ciphertext) => ciphertext,
-    ///    Err(e) => panic!("Encryption failed: {}", e), // Make the test fail if encryption fails
+    ///    Err(e) => panic!("Encryption failed: {}", e),
     /// };
-    /// let shared_k = mlkem._decaps_internal(dk,c);
+    /// let shared_k_decaps = match mlkem._decaps_internal(dk,c) {
+    ///    Ok(decapsulated_shared_key) => decapsulated_shared_key,
+    ///    Err(e) => panic!("Encryption failed: {}", e),
+    /// };
+    /// assert_eq!(shared_k, shared_k_decaps);
     /// ```
     pub fn _decaps_internal(&self, dk: Vec<u8>, c: Vec<u8>) -> Result<Vec<u8>, String>{
 
