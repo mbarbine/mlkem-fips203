@@ -300,10 +300,24 @@ impl MLKEM {
     /// ciphertext following Algorithm 18 (FIPS 203)
     /// 
     /// # Arguments
-    /// `dk` - decapsulation key
+    /// `dk` - (768*k+96)-byte decapsulation key
     /// `c` - 32*(d_u*k+d_v)-byte ciphertext 
     /// # Returns
-    /// `Vec<u8> - decapulated key
+    /// `Vec<u8> - 32 byte decapulated shared key
+    /// # Examples
+    /// ```
+    /// let params = ml_kem::utils::Parameters::default();
+    /// let mlkem = ml_kem::ml_kem::MLKEM::new(params);
+    /// let d = vec![0x00; 32];
+    /// let z = vec![0x01; 32];
+    /// let m = vec![0x02; 32];
+    /// let (ek, dk) = mlkem._keygen_internal(d,z);
+    /// let (shared_k,c) = match mlkem._encaps_internal(ek,m) {
+    ///    Ok(ciphertext) => ciphertext,
+    ///    Err(e) => panic!("Encryption failed: {}", e), // Make the test fail if encryption fails
+    /// };
+    /// let shared_k = mlkem._decaps_internal(dk,c);
+    /// ```
     pub fn _decaps_internal(&self, dk: Vec<u8>, c: Vec<u8>) -> Result<Vec<u8>, String>{
 
         // NOTE: ML-KEM requires input validation before returning the result of
@@ -331,16 +345,16 @@ impl MLKEM {
             ));
         }
 
+        // Parse out data from dk
+        let dk_pke = &dk[0..384 * self.params.k];
+        let ek_pke = &dk[384 * self.params.k..768 * self.params.k + 32];
+        let h = &dk[768 * self.params.k + 32..768 * self.params.k + 64];
+        let z = &dk[768 * self.params.k + 64..];
+
         Ok(vec![]) // Placeholder return value
     }
 
     /*
-
-    # Parse out data from dk
-    dk_pke = dk[0 : 384 * self.k]
-    ek_pke = dk[384 * self.k : 768 * self.k + 32]
-    h = dk[768 * self.k + 32 : 768 * self.k + 64]
-    z = dk[768 * self.k + 64 :]
 
     # Ensure the hash-check passes
     if self._H(ek_pke) != h:
