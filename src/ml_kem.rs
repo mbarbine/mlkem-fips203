@@ -123,17 +123,16 @@ impl MLKEM {
         ek_pke: Vec<u8>,
         m: Vec<u8>,
         r: Vec<u8>,
-    ) -> Vec<u8> {
+    ) -> Result<Vec<u8>, String> {
 
         let expected_len = ek_pke.len();
         let received_len = 384 * self.params.k + 32;
 
         if expected_len != received_len {
-            panic!(
-                "Type check failed, ek_pke has the wrong length, expected {} bytes and received {}",
-                received_len,
-                expected_len
-            );
+            return Err(format!(
+                "Type check failed: ek_pke length mismatch (expected {}, got {})",
+                received_len, expected_len
+            ));
         }
 
         // Unpack ek
@@ -146,9 +145,7 @@ impl MLKEM {
 
         // check that t_hat has been canonically encoded
         if encode_vector(&t_hat,12) != t_hat_bytes {
-            panic!(
-                "Modulus check failed, t_hat does not encode correctly"
-            );
+            return Err("Modulus check failed: t_hat does not encode correctly".to_string());
         }
 
         // Generate A_hat^T from seed rho
@@ -181,7 +178,7 @@ impl MLKEM {
         let c2 = encode_poly(&compress_poly(&v,self.params.dv),self.params.dv);
 
         //return c1 + c2, the concatenation of two encoded polynomials
-        [c1, c2].concat()
+        Ok([c1, c2].concat())
 
     }
 
@@ -207,7 +204,10 @@ impl MLKEM {
     /// let m_poly = gen_uniform_poly(mlkem.params.n, mlkem.params.q, None);
     /// let m = encode_poly(&compress_poly(&m_poly,1),1);
     /// let r = vec![0x01, 0x02, 0x03, 0x04];
-    /// let c = mlkem._k_pke_encrypt(ek_pke, m.clone(), r);
+    /// let c = match mlkem._k_pke_encrypt(ek_pke, m.clone(), r) {
+    ///    Ok(ciphertext) => ciphertext,
+    ///    Err(e) => panic!("Encryption failed: {}", e), // Make the test fail if encryption fails
+    /// };
     /// let m_dec = mlkem._k_pke_decrypt(dk_pke, c);
     /// assert_eq!(m, m_dec);
     /// ```
@@ -251,10 +251,8 @@ impl MLKEM {
     /// `(Vec<u8>, Vec<u8>)` - encapsulation key and decapsulation key (ek, dk)
     /// # Examples
     /// ```
-    /// use ml_kem::utils::{Parameters,encode_poly,generate_polynomial,compress_poly};
-    /// use ml_kem::ml_kem::MLKEM;
-    /// let params = Parameters::default();
-    /// let mlkem = MLKEM::new(params);
+    /// let params = ml_kem::utils::Parameters::default();
+    /// let mlkem = ml_kem::ml_kem::MLKEM::new(params);
     /// let d = vec![0x00; 32];
     /// let z = vec![0x01; 32];
     /// let (ek, dk) = mlkem._keygen_internal(d,z);
@@ -278,14 +276,24 @@ impl MLKEM {
     /// # Returns
     /// `(Vec<u8>, Vec<u8>)` - (32 byte shared key `K`, 32*(d_u*k+d_v)-byte ciphertext `c`)
     /// # Examples
-    pub fn _encaps_internal(&self, ek: Vec<u8>, m: Vec<u8>){
-        let (K, r) = hash_g([m,hash_h(ek)].concat());
-
-        let c = self._k_pke_encrypt(ek, m, r).unwrap_or_else(|e| {
-            println!("Validation of encapsulation key failed: {}", e);
-        });
-
-        (K, c)
+    /// ```
+    /// let params = ml_kem::utils::Parameters::default();
+    /// let mlkem = ml_kem::ml_kem::MLKEM::new(params);
+    /// let d = vec![0x00; 32];
+    /// let z = vec![0x01; 32];
+    /// let m = vec![0x02; 32];
+    /// let (ek, _dk) = mlkem._keygen_internal(d,z);
+    /// let (shared_k,c) = match mlkem._encaps_internal(ek,m) {
+    ///    Ok(ciphertext) => ciphertext,
+    ///    Err(e) => panic!("Encryption failed: {}", e), // Make the test fail if encryption fails
+    /// };
+    /// ```
+    pub fn _encaps_internal(&self, ek: Vec<u8>, m: Vec<u8>) -> Result<(Vec<u8>, Vec<u8>), String> {
+        let (shared_key, r) = hash_g([m.clone(), hash_h(ek.clone())].concat());
+    
+        let c = self._k_pke_encrypt(ek, m, r)?; // Propagate error with `?`
+    
+        Ok((shared_key, c))
     }
 
 }
