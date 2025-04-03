@@ -1,4 +1,4 @@
-use crate::utils::{Parameters, hash_g, hash_h, generate_matrix_from_seed, generate_error_vector, generate_polynomial, encode_vector, vec_ntt, vec_intt, poly_intt, decode_vector, encode_poly, decode_poly, decompress_poly, compress_poly, compress_vec,mul_mat_vec_simple,mul_vec_simple, decompress_vec, polyadd, polysub, add_vec};
+use crate::utils::{Parameters, hash_g, hash_h, hash_j, generate_matrix_from_seed, generate_error_vector, generate_polynomial, encode_vector, vec_ntt, vec_intt, poly_intt, decode_vector, encode_poly, decode_poly, decompress_poly, compress_poly, compress_vec,mul_mat_vec_simple,mul_vec_simple, decompress_vec, polyadd, polysub, add_vec, select_bytes};
 use aes_ctr_drbg::DrbgCtx;
 
 pub struct MLKEM {
@@ -98,7 +98,7 @@ impl MLKEM {
     ///
     /// # Returns
     ///
-    /// A vector of bytes representing the encrypted ciphertext.
+    /// `Vec<u8>` - A vector of bytes `c` representing the encrypted ciphertext.
     /// 
     /// # Example
     /// ```
@@ -352,32 +352,31 @@ impl MLKEM {
         let z = dk[768 * self.params.k + 64..].to_vec();
 
         // Ensure the hash-check passes
-        if hash_h(ek_pke) != h{
+        if hash_h(ek_pke.clone()) != h{
             return Err("hash check failed".to_string());
         }
 
-        Ok(vec![]) // Placeholder return value
+        // Decrypt the ciphertext
+        let m_prime = self._k_pke_decrypt(dk_pke, c.clone());
+
+        // Re-encrypt the recovered message
+        let (k_prime, r_prime) = hash_g([m_prime.clone(),h].concat());
+        let k_bar = hash_j([z,c.clone()].concat());
+
+        // Here the public encapsulation key is read from the private
+        // key and so we never expect this to fail the TypeCheck or ModulusCheck
+        let c_prime = match self._k_pke_encrypt(ek_pke.clone(), m_prime.clone(), r_prime.clone()) {
+            Ok(ciphertext) => ciphertext,
+            Err(e) => panic!("Encryption failed: {}", e),
+        };
+
+        // If c != c_prime, return K_bar as garbage
+        // WARNING: for proper implementations, it is absolutely
+        // vital that the selection between the key and garbage is
+        // performed in constant time
+        let shared_k = select_bytes(&k_bar, &k_prime, c == c_prime);
+
+        Ok(shared_k) // Placeholder return value
     }
-
-    /*
-
-    # Decrypt the ciphertext
-    m_prime = self._k_pke_decrypt(dk_pke, c)
-
-    # Re-encrypt the recovered message
-    K_prime, r_prime = self._G(m_prime + h)
-    K_bar = self._J(z + c)
-
-    # Here the public encapsulation key is read from the private
-    # key and so we never expect this to fail the TypeCheck or
-    # ModulusCheck
-    c_prime = self._k_pke_encrypt(ek_pke, m_prime, r_prime)
-
-    # If c != c_prime, return K_bar as garbage
-    # WARNING: for proper implementations, it is absolutely
-    # vital that the selection between the key and garbage is
-    # performed in constant time
-    return select_bytes(K_bar, K_prime, c == c_prime)
-    */
 
 }
