@@ -305,26 +305,36 @@ impl MLKEM {
     /// # Returns
     /// `Vec<u8> - decapulated key
     pub fn _decaps_internal(&self, dk: Vec<u8>, c: Vec<u8>) -> Result<Vec<u8>, String>{
+
+        // NOTE: ML-KEM requires input validation before returning the result of
+        // decapsulation. These are performed by the following three checks:
+        //
+        // 1) Ciphertext type check: the byte length of c must be correct
+        // 2) Decapsulation type check: the byte length of dk must be correct
+        // 3) Hash check: a hash of the internals of the dk must match
+        //
+        // Unlike encaps, these are easily performed in the kem decaps
+
+        if c.len() != 32 * (self.params.du * self.params.k + self.params.dv) {
+            return Err(format!(
+                "ciphertext type check failed. Expected {} bytes and obtained {}",
+                32 * (self.params.du * self.params.k + self.params.dv),
+                c.len()
+            ));
+        }
+
+        if dk.len() != 768 * self.params.k + 96{
+            return Err(format!(
+                "decapsulation type check failed. Expected {} bytes and obtained {}",
+                768 * self.params.k + 96,
+                dk.len()
+            ));
+        }
+
         Ok(vec![]) // Placeholder return value
     }
 
     /*
-    # NOTE: ML-KEM requires input validation before returning the result of
-    # decapsulation. These are performed by the following three checks:
-    #
-    # 1) Ciphertext type check: the byte length of c must be correct
-    # 2) Decapsulation type check: the byte length of dk must be correct
-    # 3) Hash check: a hash of the internals of the dk must match
-
-    # Unlike encaps, these are easily performed in the kem decaps
-    if len(c) != 32 * (self.du * self.k + self.dv):
-        raise ValueError(
-            f"ciphertext type check failed. Expected {32 * (self.du * self.k + self.dv)} bytes and obtained {len(c)}"
-        )
-    if len(dk) != 768 * self.k + 96:
-        raise ValueError(
-            f"decapsulation type check failed. Expected {768 * self.k + 96} bytes and obtained {len(dk)}"
-        )
 
     # Parse out data from dk
     dk_pke = dk[0 : 384 * self.k]
