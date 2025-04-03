@@ -227,7 +227,7 @@ pub fn ntt_sample(input_bytes: &[u8], n: usize) -> Vec<i64> {
 ///
 /// # Arguments
 ///
-/// * `m` - A vector of 64-bit integers
+/// * `m` - A variable length vector of bytes
 ///
 /// # Returns
 ///
@@ -236,19 +236,15 @@ pub fn ntt_sample(input_bytes: &[u8], n: usize) -> Vec<i64> {
 /// # Example
 /// ```
 /// use ml_kem::utils::hash_h;
-/// let input = vec![1i64, 2, 3, 4, 5, 6, 7, 8];
+/// let input = vec![0xFF; 8];
 /// let result = hash_h(input);
 /// assert_eq!(result.len(), 32); // Ensure the result is 32 bytes long
 /// ```
-pub fn hash_h(m: Vec<i64>) -> Vec<u8> {
-    // Convert i64 vector directly into a byte slice
-    let bytes: Vec<u8> = m.iter()
-        .flat_map(|num| num.to_le_bytes()) // Convert each i64 to 8 bytes (little-endian)
-        .collect();
+pub fn hash_h(m: Vec<u8>) -> Vec<u8> {
 
     // Apply sha3_256 hash
     let mut sha3_256hasher = Sha3_256Hasher::default();
-    sha3_256hasher.write(&bytes);
+    sha3_256hasher.write(&m);
     let bytes_result = HasherContext::finish(&mut sha3_256hasher);
     
     bytes_result.as_ref().to_vec() // Return the hashed output
