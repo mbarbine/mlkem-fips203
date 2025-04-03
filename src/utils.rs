@@ -390,35 +390,6 @@ pub fn generate_matrix_from_seed(
     }
 }
 
-/// Convert a vector of bytes into a vector of bits
-/// 
-/// # Arguments
-/// 
-/// * `bytes` - a vector of bytes
-/// 
-/// # Returns 
-///
-/// * Vec<u8> - a vector of bits
-///
-/// # Example
-/// ```
-/// use ml_kem::utils::bytes_to_bits;
-/// let bytes = vec![15, 200];
-/// let bits = bytes_to_bits(bytes);
-/// assert_eq!(bits, vec![1,1,1,1,0,0,0,0,0,0,0,1,0,0,1,1]);
-/// ```
-pub fn bytes_to_bits(bytes: Vec<u8>) -> Vec<u8> {
-	let mut bits = vec![0; bytes.len()*8];
-	let mut c = bytes;
-	for i in 0..c.len() {
-		for j in 0..8 {
-			bits[8*i+j] = c[i] % 2;
-			c[i] = c[i]/2;
-		}
-	}
-	bits
-}
-
 /// Generates a polynomial from bytes via the centered binomial distribution
 /// following Algorithm 6 of FIPS 203.
 /// 
@@ -445,14 +416,14 @@ pub fn bytes_to_bits(bytes: Vec<u8>) -> Vec<u8> {
 pub fn cbd(input_bytes: Vec<u8>, eta: usize, n:usize) -> Polynomial<i64> {
 	assert_eq!(eta*n/4, input_bytes.len(), "input length must be eta*n/4");
 	let mut coefficients = vec![0;n];
-	let bits = bytes_to_bits(input_bytes);
+	let mut t = BigUint::from_bytes_le(&input_bytes);
+	let mask = BigUint::from((1 << eta)-1 as u64);
+	let mask2 = BigUint::from((1 << 2*eta)-1 as u64);
 	for i in 0..n {
-		let mut a = 0i64;
-		let mut b = 0i64;
-		for j in 0..eta {
-			a += bits[2*i*eta+j] as i64;
-			b += bits[2*i*eta+eta+j] as i64;
-		}
+		let x = t.clone() & mask2.clone();
+		let a = (x.clone() & mask.clone()).count_ones() as i64;
+		let b = ((x.clone() >> eta) & mask.clone()).count_ones() as i64;
+		t >>= 2*eta;
 		coefficients[i] = a-b;
 	}
 	Polynomial::new(coefficients)
@@ -649,12 +620,15 @@ pub fn decode_poly(input_bytes: Vec<u8>, d: usize) -> Polynomial<i64> {
 	}
 	
 	let mut coeffs = vec![0; 256];
-	let b = bytes_to_bits(input_bytes);
-	// Form bits into integer coefficients
+	let mut b_int = BigUint::from_bytes_le(&input_bytes);
+	let mask = BigUint::from((1 << d) - 1 as u64);
+	// Form bits from big unsigned integer into integer coefficients
 	for i in 0..256 {
-		for j in 0..d {	
-			coeffs[i] = (coeffs[i]+(b[i*d+j] as i64)*(1 << j)) % m;
+		let bits_vec = (b_int.clone() & mask.clone()).to_u64_digits();
+		if bits_vec.len() > 0 {
+			coeffs[i] = bits_vec[0] as i64 % m;
 		}
+		b_int >>= d; // Right shift d bits
 	}
 	Polynomial::new(coeffs)
 }
