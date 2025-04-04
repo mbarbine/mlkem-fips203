@@ -1,8 +1,8 @@
 #[cfg(test)]  // This makes the following module compile only during tests
 mod tests {
-    use ml_kem::parameters::Parameters;
-    use ml_kem::utils::{encode_poly,compress_poly};
-	use ml_kem::ml_kem::MLKEM;
+    use mlkem_fips203::parameters::Parameters;
+    use mlkem_fips203::utils::{encode_poly,compress_poly};
+	use mlkem_fips203::ml_kem::MLKEM;
     use polynomial_ring::Polynomial;
 
     // test for setting the DRBG seed
