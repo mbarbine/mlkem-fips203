@@ -15,13 +15,10 @@ fn main() {
     let m_poly = gen_uniform_poly(mlkem.params.n, mlkem.params.q, None); //random message polynomial
     let m = encode_poly(&compress_poly(&m_poly,1),1);
     let r = vec![0x01, 0x02, 0x03, 0x04];
-
-    // Handle encryption result properly
     let c = match mlkem._k_pke_encrypt(ek_pke, m.clone(), r) {
         Ok(ciphertext) => ciphertext,
         Err(e) => panic!("Encryption failed: {}", e),
     };
-
     let m_dec = mlkem._k_pke_decrypt(dk_pke, c);
     assert_eq!(m, m_dec);
 
