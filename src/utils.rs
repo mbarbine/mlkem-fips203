@@ -17,10 +17,10 @@ use num_traits::Zero;
 /// let a = vec![10, 20, 30];
 /// let b = vec![100, 110, 120];
 ///
-/// assert_eq!(select_bytes(&a, &b, false), a);
-/// assert_eq!(select_bytes(&a, &b, true), b);
+/// assert_eq!(select_bytes(a.clone(), b.clone(), false), a);
+/// assert_eq!(select_bytes(a.clone(), b.clone(), true), b);
 /// ```
-pub fn select_bytes(a: &[u8], b: &[u8], cond: bool) -> Vec<u8> {
+pub fn select_bytes(a: Vec<u8>, b: Vec<u8>, cond: bool) -> Vec<u8> {
     assert_eq!(a.len(), b.len(), "Input slices must have the same length");
 
     let cw = if cond { 0xFF } else { 0x00 };

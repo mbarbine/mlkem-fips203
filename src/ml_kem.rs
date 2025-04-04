@@ -378,7 +378,7 @@ impl MLKEM {
         // WARNING: for proper implementations, it is absolutely
         // vital that the selection between the key and garbage is
         // performed in constant time
-        let shared_k = select_bytes(&k_bar, &k_prime, c == c_prime);
+        let shared_k = select_bytes(k_bar, k_prime, c == c_prime);
 
         Ok(shared_k)
     }
