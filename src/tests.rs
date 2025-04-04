@@ -36,7 +36,7 @@ mod tests {
         let d = vec![0x01, 0x02, 0x03, 0x04];
         let (ek_pke, dk_pke) = mlkem._k_pke_keygen(d);
         let m_poly = gen_uniform_poly(mlkem.params.n, mlkem.params.q, None);
-        let m = encode_poly(&compress_poly(&m_poly,1),1);
+        let m = encode_poly(compress_poly(m_poly,1),1);
         let r = vec![0x01, 0x02, 0x03, 0x04];
         let c = match mlkem._k_pke_encrypt(ek_pke, m.clone(), r) {
             Ok(ciphertext) => ciphertext,
@@ -54,7 +54,7 @@ mod tests {
         let d = vec![0x01, 0x02, 0x03, 0x04];
         let (ek_pke, dk_pke) = mlkem._k_pke_keygen(d);
         let m_poly = gen_uniform_poly(mlkem.params.n, mlkem.params.q, None);
-        let m = encode_poly(&compress_poly(&m_poly,1),1);
+        let m = encode_poly(compress_poly(m_poly,1),1);
         let r = vec![0x01, 0x02, 0x03, 0x04];
         let c = match mlkem._k_pke_encrypt(ek_pke, m.clone(), r) {
             Ok(ciphertext) => ciphertext,
@@ -72,7 +72,7 @@ mod tests {
         let d = vec![0x01, 0x02, 0x03, 0x04];
         let (ek_pke, dk_pke) = mlkem._k_pke_keygen(d);
         let m_poly = gen_uniform_poly(mlkem.params.n, mlkem.params.q, None);
-        let m = encode_poly(&compress_poly(&m_poly,1),1);
+        let m = encode_poly(compress_poly(m_poly,1),1);
         let r = vec![0x01, 0x02, 0x03, 0x04];
         let c = match mlkem._k_pke_encrypt(ek_pke, m.clone(), r) {
             Ok(ciphertext) => ciphertext,

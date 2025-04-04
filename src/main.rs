@@ -13,7 +13,7 @@ fn main() {
     let d = (mlkem.params.random_bytes)(32, mlkem.drbg.as_mut());
     let (ek_pke, dk_pke) = mlkem._k_pke_keygen(d); // Generate public and private keys for PKE
     let m_poly = gen_uniform_poly(mlkem.params.n, mlkem.params.q, None); //random message polynomial
-    let m = encode_poly(&compress_poly(&m_poly,1),1); // compress and encode the message polynomial
+    let m = encode_poly(compress_poly(m_poly,1),1); // compress and encode the message polynomial
     let r = vec![0x01, 0x02, 0x03, 0x04]; // Example random bytes for encryption
     let c = match mlkem._k_pke_encrypt(ek_pke, m.clone(), r) { //perform encryption, handling potential errors
         Ok(ciphertext) => ciphertext,
