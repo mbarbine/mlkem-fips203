@@ -25,4 +25,16 @@ fn main() {
     let m_dec = mlkem._k_pke_decrypt(dk_pke, c);
     assert_eq!(m, m_dec);
 
+    // run the basic keygen/encaps/decaps
+    let (ek, dk) = mlkem.keygen();
+    let (shared_k,c) = match mlkem.encaps(ek) {
+        Ok(ciphertext) => ciphertext,
+        Err(e) => panic!("Encryption failed: {}", e),
+    };
+    let shared_k_decaps = match mlkem.decaps(dk,c) {
+        Ok(decapsulated_shared_key) => decapsulated_shared_key,
+        Err(e) => panic!("Decryption failed: {}", e),
+     };
+     assert_eq!(shared_k, shared_k_decaps);
+
 }
