@@ -303,7 +303,7 @@ impl MLKEM {
     /// `dk` - (768*k+96)-byte decapsulation key
     /// `c` - 32*(d_u*k+d_v)-byte ciphertext 
     /// # Returns
-    /// `Vec<u8> - 32 byte decapulated shared key
+    /// `Vec<u8>` - 32 byte decapulated shared key
     /// # Examples
     /// ```
     /// let params = ml_kem::utils::Parameters::default();
@@ -383,10 +383,10 @@ impl MLKEM {
         Ok(shared_k)
     }
 	
-	/// Generate an encapsulation key and corresponding decapsulation key
-	/// following Algorithm 19 (FIPS 203)
-	///
-	/// # Arguments
+    /// Generate an encapsulation key and corresponding decapsulation key
+    /// following Algorithm 19 (FIPS 203)
+    ///
+    /// # Arguments
     /// # Returns
     /// `(Vec<u8>, Vec<u8>)` - encapsulation key and decapsulation key (ek, dk)
     /// # Examples
@@ -395,32 +395,32 @@ impl MLKEM {
     /// let mut mlkem = ml_kem::ml_kem::MLKEM::new(params);
     /// let (ek, dk) = mlkem.keygen();
     /// ```
-	pub fn keygen(&mut self) -> (Vec<u8>, Vec<u8>) {
+    pub fn keygen(&mut self) -> (Vec<u8>, Vec<u8>) {
 		let d = (self.params.random_bytes)(32, self.drbg.as_mut());
 		let z = (self.params.random_bytes)(32, self.drbg.as_mut());
 		let (ek, dk) = self._keygen_internal(d,z);
 		return (ek, dk)
 	}
 	
-	/// Derive an encapsulation key and corresponding decapsulation key
-	/// following the approach from Section 7.1 (FIPS 203)
+    /// Derive an encapsulation key and corresponding decapsulation key
+    /// following the approach from Section 7.1 (FIPS 203)
     /// with storage of the ``seed`` value for later expansion.
-	///
-	/// # Arguments
-	/// * `seed` - 64 byte concatenation of the `d` and `z` values
+    ///
+    /// # Arguments
+    /// * `seed` - 64 byte concatenation of the `d` and `z` values
     /// # Returns
     /// `(Vec<u8>, Vec<u8>)` - encapsulation key and decapsulation key (ek, dk)
     /// # Examples
     /// ```
     /// let params = ml_kem::utils::Parameters::default();
     /// let mut mlkem = ml_kem::ml_kem::MLKEM::new(params);
-	/// let seed = vec![0x00; 64];
+    /// let seed = vec![0x00; 64];
     /// let (ek, dk) = match mlkem.key_derive(seed) {
-    ///    Ok((e_key, d_key)) => (e_key, d_key),
+    ///    Ok(keys) => (keys),
     ///    Err(e) => panic!("Key derive failed: {}", e),
     /// };
     /// ```
-	pub fn key_derive(&self, seed: Vec<u8>) -> Result<(Vec<u8>, Vec<u8>), String> {
+    pub fn key_derive(&self, seed: Vec<u8>) -> Result<(Vec<u8>, Vec<u8>), String> {
         if seed.len() != 64 {
             return Err("The seed must be 64 bytes long".to_string());
         }
@@ -428,5 +428,56 @@ impl MLKEM {
 		let z = seed[32..].to_vec();
 		let (ek, dk) = self._keygen_internal(d, z);
 		Ok((ek, dk))
+	}
+	
+    /// Uses the encapsulation key to generate a shared secret key and an
+    /// associated ciphertext following Algorithm 20 (FIPS 203)
+    /// 
+    /// # Arguments
+    /// * `ek` - (384*k+32)-byte encoded encapsulation key
+    /// # Returns
+    /// `(Vec<u8>, Vec<u8>)` - (32 byte shared key `K`, 32*(d_u*k+d_v)-byte ciphertext `c`)
+    /// # Examples
+    /// ```
+    /// let params = ml_kem::utils::Parameters::default();
+    /// let mut mlkem = ml_kem::ml_kem::MLKEM::new(params);
+    /// let (ek, _dk) = mlkem.keygen();
+    /// let (shared_k,c) = match mlkem.encaps(ek) {
+    ///    Ok(ciphertext) => ciphertext,
+    ///    Err(e) => panic!("Encryption failed: {}", e), // Make the test fail if encryption fails
+    /// };
+    /// ```
+	pub fn encaps(&mut self, ek: Vec<u8>) -> Result<(Vec<u8>, Vec<u8>), String> {
+		let m = (self.params.random_bytes)(32, self.drbg.as_mut());
+		let (shared_k, c) = self._encaps_internal(ek, m)?; // Propagate error with `?`
+		Ok((shared_k, c))
+	}
+	
+    /// Uses the decapsulation key to produce a shared secret key from a
+    /// ciphertext following Algorithm 21 (FIPS 203)
+    /// 
+    /// # Arguments
+    /// * `dk` - (768*k+96)-byte decapsulation key
+    /// * `c` - 32*(d_u*k+d_v)-byte ciphertext 
+    /// # Returns
+    /// `Vec<u8>` - 32 byte decapulated shared key
+    /// # Examples
+    /// ```
+    /// let params = ml_kem::utils::Parameters::default();
+    /// let mut mlkem = ml_kem::ml_kem::MLKEM::new(params);
+    /// let (ek, dk) = mlkem.keygen();
+    /// let (shared_k,c) = match mlkem.encaps(ek) {
+    ///    Ok(ciphertext) => ciphertext,
+    ///    Err(e) => panic!("Encryption failed: {}", e),
+    /// };
+    /// let shared_k_decaps = match mlkem.decaps(dk,c) {
+    ///    Ok(decapsulated_shared_key) => decapsulated_shared_key,
+    ///    Err(e) => panic!("Decryption failed: {}", e),
+    /// };
+    /// assert_eq!(shared_k, shared_k_decaps);
+    /// ```
+	pub fn decaps(&self, dk: Vec<u8>, c: Vec<u8>) -> Result<Vec<u8>, String> {
+		let shared_k_prime = self._decaps_internal(dk, c)?; // Propagate error with `?`
+		Ok(shared_k_prime)
 	}
 }
