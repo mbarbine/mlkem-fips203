@@ -39,9 +39,8 @@ impl MLKEM {
     /// 
     /// # Example
     /// ```
-    /// use ml_kem::parameters::Parameters;
     /// use ml_kem::ml_kem::MLKEM;
-    /// let params = Parameters::default();
+    /// let params = ml_kem::parameters::Parameters::mlkem512();
     /// let mlkem = MLKEM::new(params);
     /// let d = vec![0x01, 0x02, 0x03, 0x04];
     /// let (ek_pke, dk_pke) = mlkem._k_pke_keygen(d);
@@ -104,9 +103,8 @@ impl MLKEM {
     /// # Example
     /// ```
     /// use ml_kem::ml_kem::MLKEM;
-    /// use ml_kem::parameters::Parameters;
     /// use ml_kem::utils::{encode_poly,compress_poly, generate_polynomial};
-    /// let params = Parameters::default();
+    /// let params = ml_kem::parameters::Parameters::mlkem512();
     /// let mlkem = MLKEM::new(params);
     /// use ring_lwe::utils::gen_uniform_poly;
     /// let d = vec![0x01, 0x02, 0x03, 0x04];
@@ -197,10 +195,9 @@ impl MLKEM {
     /// # Examples
     /// ```
     /// use ml_kem::ml_kem::MLKEM;
-    /// use ml_kem::parameters::Parameters;
     /// use ml_kem::utils::{encode_poly,generate_polynomial,compress_poly};
     /// use ring_lwe::utils::gen_uniform_poly;
-    /// let params = Parameters::default();
+    /// let params = ml_kem::parameters::Parameters::mlkem512();
     /// let mlkem = MLKEM::new(params);
     /// let d = vec![0x01, 0x02, 0x03, 0x04];
     /// let (ek_pke, dk_pke) = mlkem._k_pke_keygen(d);
@@ -254,7 +251,7 @@ impl MLKEM {
     /// `(Vec<u8>, Vec<u8>)` - encapsulation key and decapsulation key (ek, dk)
     /// # Examples
     /// ```
-    /// let params = ml_kem::parameters::Parameters::default();
+    /// let params = ml_kem::parameters::Parameters::mlkem512();
     /// let mlkem = ml_kem::ml_kem::MLKEM::new(params);
     /// let d = vec![0x00; 32];
     /// let z = vec![0x01; 32];
@@ -280,7 +277,7 @@ impl MLKEM {
     /// `(Vec<u8>, Vec<u8>)` - (32 byte shared key `K`, 32*(d_u*k+d_v)-byte ciphertext `c`)
     /// # Examples
     /// ```
-    /// let params = ml_kem::parameters::Parameters::default();
+    /// let params = ml_kem::parameters::Parameters::mlkem512();
     /// let mlkem = ml_kem::ml_kem::MLKEM::new(params);
     /// let d = vec![0x00; 32];
     /// let z = vec![0x01; 32];
@@ -309,7 +306,7 @@ impl MLKEM {
     /// `Vec<u8>` - 32 byte decapulated shared key
     /// # Examples
     /// ```
-    /// let params = ml_kem::parameters::Parameters::default();
+    /// let params = ml_kem::parameters::Parameters::mlkem512();
     /// let mlkem = ml_kem::ml_kem::MLKEM::new(params);
     /// let d = vec![0x00; 32];
     /// let z = vec![0x01; 32];
@@ -394,7 +391,7 @@ impl MLKEM {
     /// `(Vec<u8>, Vec<u8>)` - encapsulation key and decapsulation key (ek, dk)
     /// # Examples
     /// ```
-    /// let params = ml_kem::parameters::Parameters::default();
+    /// let params = ml_kem::parameters::Parameters::mlkem512();
     /// let mut mlkem = ml_kem::ml_kem::MLKEM::new(params);
     /// let (ek, dk) = mlkem.keygen();
     /// ```
@@ -415,7 +412,7 @@ impl MLKEM {
     /// `(Vec<u8>, Vec<u8>)` - encapsulation key and decapsulation key (ek, dk)
     /// # Examples
     /// ```
-    /// let params = ml_kem::parameters::Parameters::default();
+    /// let params = ml_kem::parameters::Parameters::mlkem512();
     /// let mut mlkem = ml_kem::ml_kem::MLKEM::new(params);
     /// let seed = vec![0x00; 64];
     /// let (ek, dk) = match mlkem.key_derive(seed) {
@@ -442,7 +439,7 @@ impl MLKEM {
     /// `(Vec<u8>, Vec<u8>)` - (32 byte shared key `K`, 32*(d_u*k+d_v)-byte ciphertext `c`)
     /// # Examples
     /// ```
-    /// let params = ml_kem::parameters::Parameters::default();
+    /// let params = ml_kem::parameters::Parameters::mlkem512();
     /// let mut mlkem = ml_kem::ml_kem::MLKEM::new(params);
     /// let (ek, _dk) = mlkem.keygen();
     /// let (shared_k,c) = match mlkem.encaps(ek) {
@@ -466,7 +463,7 @@ impl MLKEM {
     /// `Vec<u8>` - 32 byte decapulated shared key
     /// # Examples
     /// ```
-    /// let params = ml_kem::parameters::Parameters::default();
+    /// let params = ml_kem::parameters::Parameters::mlkem512();
     /// let mut mlkem = ml_kem::ml_kem::MLKEM::new(params);
     /// let (ek, dk) = mlkem.keygen();
     /// let (shared_k,c) = match mlkem.encaps(ek) {

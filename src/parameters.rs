@@ -31,7 +31,7 @@ pub struct Parameters {
 /// default parameters for module-LWE
 impl Parameters {
     // Provides about 128 bit level of security.
-    fn mlkem512() -> Self {
+    pub fn mlkem512() -> Self {
         let n = 256;
         let q = 3329;
         let k = 2;

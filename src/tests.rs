@@ -8,7 +8,7 @@ mod tests {
     // test for setting the DRBG seed
     #[test]
     pub fn test_set_drbg_seed() {
-        let params = Parameters::default();
+        let params = Parameters::mlkem512();
         let mut mlkem = MLKEM::new(params);
 
         // Generate random bytes before setting DRBG seed (should use system randomness)
@@ -52,7 +52,7 @@ mod tests {
     // Test for basic keygen/encapsulate/decapsulate
     #[test]
     fn test_keygen_encaps_decaps() {
-        let params = Parameters::default();
+        let params = Parameters::mlkem512();
         let mut mlkem = MLKEM::new(params);
         let (ek, dk) = mlkem.keygen();
         let (shared_k,c) = match mlkem.encaps(ek) {

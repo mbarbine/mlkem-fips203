@@ -1,12 +1,13 @@
 use ml_kem::ml_kem::MLKEM;
 use ml_kem::parameters::Parameters;
-use ml_kem::utils::{encode_poly,generate_polynomial};
+use ml_kem::utils::{encode_poly,compress_poly};
+use ring_lwe::utils::gen_uniform_poly;
 mod tests;
 
 fn main() {
 
     // run the basic PKE with a uniformly random message polynomial
-    let params = Parameters::default(); // initialize default parameters
+    let params = Parameters::mlkem512(); // initialize default parameters
     let mut mlkem = MLKEM::new(params); 
     mlkem.set_drbg_seed(vec![0x42; 48]); // Example 48-byte seed
     let d = (mlkem.params.random_bytes)(32, mlkem.drbg.as_mut());
