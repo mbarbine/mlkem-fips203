@@ -8,18 +8,18 @@ mod tests {
     #[test]
     pub fn test_set_drbg_seed() {
         let params = Parameters::default();
-        let mut kem = MLKEM::new(params);
+        let mut mlkem = MLKEM::new(params);
 
         // Generate random bytes before setting DRBG seed (should use system randomness)
-        let rand_bytes_os = (kem.params.random_bytes)(16, None);
+        let rand_bytes_os = (mlkem.params.random_bytes)(16, None);
         assert_eq!(rand_bytes_os.len(), 16);
 
         // Set DRBG seed
         let seed = vec![0x42; 48]; // Example 48-byte seed
-        kem.set_drbg_seed(seed);
+        mlkem.set_drbg_seed(seed);
 
         // Generate random bytes using DRBG
-        let rand_bytes_drbg = (kem.params.random_bytes)(16, kem.drbg.as_mut());
+        let rand_bytes_drbg = (mlkem.params.random_bytes)(16, mlkem.drbg.as_mut());
         assert_eq!(rand_bytes_drbg.len(), 16);
 
         // Ensure DRBG output is deterministic
@@ -41,7 +41,7 @@ mod tests {
         // Handle encryption result properly
         let c = match mlkem._k_pke_encrypt(ek_pke, m.clone(), r) {
             Ok(ciphertext) => ciphertext,
-            Err(e) => panic!("Encryption failed: {}", e), // Make the test fail if encryption fails
+            Err(e) => panic!("Encryption failed: {}", e),
         };
     
         let m_dec = mlkem._k_pke_decrypt(dk_pke, c);
