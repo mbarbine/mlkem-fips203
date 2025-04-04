@@ -1,8 +1,8 @@
-# ml-kem
+# mlkem-fips203
 
 ![example workflow](https://github.com/lattice-based-cryptography/ml-kem/actions/workflows/basic.yml/badge.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT)
-[![Crates.io](https://img.shields.io/crates/v/ml-kem.svg)](https://crates.io/crates/ml-kem)
+[![Crates.io](https://img.shields.io/crates/v/mlkem-fips203.svg)](https://crates.io/crates/mlkem-fips203)
 
 ### Description
 
