@@ -17,10 +17,10 @@ use num_traits::Zero;
 /// let a = vec![10, 20, 30];
 /// let b = vec![100, 110, 120];
 ///
-/// assert_eq!(select_bytes(&a, &b, false), a);
-/// assert_eq!(select_bytes(&a, &b, true), b);
+/// assert_eq!(select_bytes(a.clone(), b.clone(), false), a);
+/// assert_eq!(select_bytes(a.clone(), b.clone(), true), b);
 /// ```
-pub fn select_bytes(a: &[u8], b: &[u8], cond: bool) -> Vec<u8> {
+pub fn select_bytes(a: Vec<u8>, b: Vec<u8>, cond: bool) -> Vec<u8> {
     assert_eq!(a.len(), b.len(), "Input slices must have the same length");
 
     let cw = if cond { 0xFF } else { 0x00 };
@@ -58,7 +58,7 @@ pub fn mod_coeffs(poly: Polynomial<i64>, q: i64) -> Polynomial<i64> {
 ///	* `f` - polynomial modulus.
 /// # Returns:
 ///	polynomial in Z_modulus[X]/(f)
-pub fn polyadd(x : &Polynomial<i64>, y : &Polynomial<i64>, q : i64, f : &Polynomial<i64>) -> Polynomial<i64> {
+pub fn polyadd(x : Polynomial<i64>, y : Polynomial<i64>, q : i64, f : Polynomial<i64>) -> Polynomial<i64> {
 	let mut r = x+y;
     r = polyrem(r,f);
     mod_coeffs(r, q)
@@ -72,8 +72,8 @@ pub fn polyadd(x : &Polynomial<i64>, y : &Polynomial<i64>, q : i64, f : &Polynom
 ///	* `f` - polynomial modulus.
 /// # Returns
 ///	polynomial in Z_modulus[X]/(f)
-pub fn polysub(x : &Polynomial<i64>, y : &Polynomial<i64>, q: i64, f : &Polynomial<i64>) -> Polynomial<i64> {
-	polyadd(x, &polyinv(y, q), q, f)
+pub fn polysub(x : Polynomial<i64>, y : Polynomial<i64>, q: i64, f : Polynomial<i64>) -> Polynomial<i64> {
+	polyadd(x, polyinv(y, q), q, f)
 }
 
 /// Additive inverse of a polynomial
@@ -82,7 +82,7 @@ pub fn polysub(x : &Polynomial<i64>, y : &Polynomial<i64>, q: i64, f : &Polynomi
 /// * `q` - coefficient modulus.
 /// # Returns
 ///	polynomial in Z_modulus[X]
-pub fn polyinv(x : &Polynomial<i64>, q: i64) -> Polynomial<i64> {
+pub fn polyinv(x : Polynomial<i64>, q: i64) -> Polynomial<i64> {
     mod_coeffs(-x, q)
   }
 
@@ -92,7 +92,7 @@ pub fn polyinv(x : &Polynomial<i64>, q: i64) -> Polynomial<i64> {
 ///	* `f` - polynomial modulus
 /// # Returns
 /// polynomial in Z[X]/(f)
-pub fn polyrem(g: Polynomial<i64>, f: &Polynomial<i64>) -> Polynomial<i64> {
+pub fn polyrem(g: Polynomial<i64>, f: Polynomial<i64>) -> Polynomial<i64> {
 	let n = f.coeffs().len()-1;
 	let mut coeffs = g.coeffs().to_vec();
 	if coeffs.len() < n+1 {
@@ -104,6 +104,20 @@ pub fn polyrem(g: Polynomial<i64>, f: &Polynomial<i64>) -> Polynomial<i64> {
 		coeffs.resize(n,0);
 		Polynomial::new(coeffs)
 	}
+}
+
+/// Multiply two polynomials
+/// # Arguments:
+///	* `x` - polynomial to be multiplied
+/// * `y` - polynomial to be multiplied.
+/// * `modulus` - coefficient modulus.
+///	* `f` - polynomial modulus.
+/// # Returns:
+///	polynomial in Z_q[X]/(f)
+pub fn polymul(x : Polynomial<i64>, y : Polynomial<i64>, q : i64, f : Polynomial<i64>) -> Polynomial<i64> {
+	let mut r = x*y;
+    r = polyrem(r,f);
+    mod_coeffs(r, q)
 }
 
 /// Computes the bit-reversal of an unsigned `k`-bit integer `i`.
@@ -150,12 +164,12 @@ pub fn bit_reverse(i: i64, k: usize) -> i64 {
 /// use ml_kem::utils::ntt_sample;
 /// let input_bytes = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06];
 /// let n = 10;
-/// let result = ntt_sample(&input_bytes, n);
+/// let result = ntt_sample(input_bytes, n);
 /// assert_eq!(result.len(), n); // Ensure the result has the expected length
 /// ```
 /// # Note
 /// The function samples coefficients from the input bytes, ensuring that they are less than 3329, the Kyber prime.
-pub fn ntt_sample(input_bytes: &[u8], n: usize) -> Vec<i64> {
+pub fn ntt_sample(input_bytes: Vec<u8>, n: usize) -> Vec<i64> {
     let mut coefficients = vec![0i64; n];
     let mut i = 0;
     let mut j = 0;
@@ -396,15 +410,30 @@ pub fn generate_matrix_from_seed(
     for i in 0..rank {
         for j in 0..rank {
             let xof_bytes = xof(rho.clone(), j as u8, i as u8);
-            a_data[i][j] = Polynomial::new(ntt_sample(&xof_bytes, n));
+            a_data[i][j] = Polynomial::new(ntt_sample(xof_bytes, n));
         }
     }
 
     if transpose {
-        module_lwe::utils::transpose(&a_data)
+        matrix_transpose(a_data)
     } else {
         a_data
     }
+}
+
+/// take the transpose of a matrix of polynomials
+/// # Arguments
+/// * `m` - matrix of polynomials
+/// # Returns
+/// * `result` - matrix of polynomials
+pub fn matrix_transpose(m: Vec<Vec<Polynomial<i64>>>) -> Vec<Vec<Polynomial<i64>>> {
+	let mut result = vec![vec![Polynomial::new(vec![]); m.len()]; m[0].len()];
+	for i in 0..m.len() {
+		for j in 0..m[0].len() {
+			result[j][i] = m[i][j].clone();
+		}
+	}
+	result
 }
 
 /// Generates a polynomial from bytes via the centered binomial distribution
@@ -580,10 +609,10 @@ pub fn generate_polynomial(
 /// let n = 0;
 /// let poly_size = 256;
 /// let (poly, new_n) = generate_polynomial(sigma, eta, n, poly_size, None);
-/// let encoded = encode_poly(&poly, 12);
+/// let encoded = encode_poly(poly, 12);
 /// assert_eq!(encoded.len(), 384); // 32 * d (d = 12)
 /// ```
-pub fn encode_poly(poly: &Polynomial<i64>, d: usize) -> Vec<u8> {
+pub fn encode_poly(poly: Polynomial<i64>, d: usize) -> Vec<u8> {
     let poly_mod = mod_coeffs(poly.clone(), 3329);
 	let mut t = BigUint::zero(); // Start with a BigUint initialized to zero
     let mut coeffs = poly_mod.coeffs().to_vec(); // get the coefficients of the polynomial
@@ -621,10 +650,11 @@ pub fn encode_poly(poly: &Polynomial<i64>, d: usize) -> Vec<u8> {
 /// use ml_kem::utils::{generate_polynomial,encode_poly,decode_poly};
 /// let sigma = vec![0u8; 32]; // Example seed
 /// let eta = 3;
-/// let n = 0;
-/// let poly_size = 256;
-/// let (poly, new_n) = generate_polynomial(sigma, eta, n, poly_size, Some(3329));
-/// let encoded = encode_poly(&poly, 12);
+/// let b = 0;
+/// let n = 256;
+/// let q = 3329;
+/// let (poly, _b) = generate_polynomial(sigma, eta, b, n, Some(q));
+/// let encoded = encode_poly(poly.clone(), 12);
 /// let decoded = decode_poly(encoded, 12);
 /// assert_eq!(poly, decoded);
 /// ```
@@ -671,10 +701,10 @@ pub fn decode_poly(input_bytes: Vec<u8>, d: usize) -> Polynomial<i64> {
 /// let (p0, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, None);
 /// let (p1, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, None);
 /// let polys = vec![p0, p1];
-/// let encoded_bytes = encode_vector(&polys, 12);
+/// let encoded_bytes = encode_vector(polys, 12);
 /// assert_eq!(encoded_bytes.len(), 768);  // Total length after encoding two polynomials
 /// ```
-pub fn encode_vector(v: &Vec<Polynomial<i64>>, d: usize) -> Vec<u8> {
+pub fn encode_vector(v: Vec<Polynomial<i64>>, d: usize) -> Vec<u8> {
     let mut encoded_bytes = Vec::new();
     for poly in v {
         let encoded_poly = encode_poly(poly, d);
@@ -702,11 +732,11 @@ pub fn encode_vector(v: &Vec<Polynomial<i64>>, d: usize) -> Vec<u8> {
 /// let (p0, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, Some(3329));
 /// let (p1, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, Some(3329));
 /// let polys = vec![p0, p1];
-/// let encoded_bytes = encode_vector(&polys, 12);
-/// let decoded = decode_vector(&encoded_bytes, 2, 12);
+/// let encoded_bytes = encode_vector(polys.clone(), 12);
+/// let decoded = decode_vector(encoded_bytes, 2, 12);
 /// assert_eq!(polys, decoded);
 /// ```
-pub fn decode_vector(input_bytes: &Vec<u8>, k: usize, d: usize) -> Vec<Polynomial<i64>> {
+pub fn decode_vector(input_bytes: Vec<u8>, k: usize, d: usize) -> Vec<Polynomial<i64>> {
 	assert_eq!(256*d*k, input_bytes.len()*8, "256*d*k must be length of input bytes times 8");	
 	let mut v = vec![Polynomial::new(vec![]); k];
 	for i in 0..k {
@@ -761,13 +791,13 @@ fn decompress_ele(x: i64, d: usize) -> i64 {
 /// let n = 0;
 /// let poly_size = 256;
 /// let (poly, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, Some(3329));
-/// let compressed_poly = compress_poly(&poly,12);
+/// let compressed_poly = compress_poly(poly.clone(),12);
 /// assert_eq!(compressed_poly.coeffs().len(), poly.coeffs().len());
 /// ```
 ///
 /// # Notes
 /// - This is lossy compression
-pub fn compress_poly(poly: &Polynomial<i64>, d: usize) -> Polynomial<i64> {
+pub fn compress_poly(poly: Polynomial<i64>, d: usize) -> Polynomial<i64> {
     let compressed_coeffs: Vec<i64> = poly.coeffs().iter().map(|&c| compress_ele(c, d)).collect();
     Polynomial::new(compressed_coeffs)
 }
@@ -784,10 +814,10 @@ pub fn compress_poly(poly: &Polynomial<i64>, d: usize) -> Polynomial<i64> {
 /// let (p0, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, Some(3329));
 /// let (p1, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, Some(3329));
 /// let v = vec![p0, p1];
-/// compress_vec(&v, 12);
+/// compress_vec(v, 12);
 /// ```
-pub fn compress_vec(v: &Vec<Polynomial<i64>>, d: usize) -> Vec<Polynomial<i64>> {
-    v.iter().map(|poly| compress_poly(poly, d)).collect()
+pub fn compress_vec(v: Vec<Polynomial<i64>>, d: usize) -> Vec<Polynomial<i64>> {
+    v.iter().map(|poly| compress_poly(poly.clone(), d)).collect()
 }
 
 /// compress each polynomial in a vector of polynomials
@@ -802,12 +832,12 @@ pub fn compress_vec(v: &Vec<Polynomial<i64>>, d: usize) -> Vec<Polynomial<i64>> 
 /// let (p0, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, Some(3329));
 /// let (p1, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, Some(3329));
 /// let v = vec![p0, p1];
-/// let compress_v = compress_vec(&v, 12);
-/// let recovered_v = decompress_vec(&compress_v,12);
+/// let compress_v = compress_vec(v.clone(), 12);
+/// let recovered_v = decompress_vec(compress_v,12);
 /// assert_eq!(v,recovered_v);
 /// ```
-pub fn decompress_vec(v: &Vec<Polynomial<i64>>, d: usize) -> Vec<Polynomial<i64>> {
-    v.iter().map(|poly| decompress_poly(poly, d)).collect()
+pub fn decompress_vec(v: Vec<Polynomial<i64>>, d: usize) -> Vec<Polynomial<i64>> {
+    v.iter().map(|poly| decompress_poly(poly.clone(), d)).collect()
 }
 
 
@@ -828,9 +858,9 @@ pub fn decompress_vec(v: &Vec<Polynomial<i64>>, d: usize) -> Vec<Polynomial<i64>
 /// let n = 0;
 /// let poly_size = 256;
 /// let (poly, _n) = generate_polynomial(sigma.clone(), eta, n, poly_size, Some(3329));
-/// let compressed_poly = compress_poly(&poly,12);
+/// let compressed_poly = compress_poly(poly.clone(),12);
 /// assert_eq!(compressed_poly.coeffs().len(), poly.coeffs().len());
-/// let poly_recovered = decompress_poly(&compressed_poly,12);
+/// let poly_recovered = decompress_poly(compressed_poly,12);
 /// assert_eq!(poly,poly_recovered);
 /// ```
 ///
@@ -838,7 +868,7 @@ pub fn decompress_vec(v: &Vec<Polynomial<i64>>, d: usize) -> Vec<Polynomial<i64>
 /// - This as compression is lossy, we have
 /// x' = decompress(compress(x)), which x' != x, but is
 /// close in magnitude.
-pub fn decompress_poly(poly: &Polynomial<i64>, d: usize) -> Polynomial<i64> {
+pub fn decompress_poly(poly: Polynomial<i64>, d: usize) -> Polynomial<i64> {
     let decompressed_coeffs: Vec<i64> = poly.coeffs().iter().map(|&c| decompress_ele(c, d)).collect();
     Polynomial::new(decompressed_coeffs)
 }
@@ -871,11 +901,11 @@ pub fn decompress_poly(poly: &Polynomial<i64>, d: usize) -> Polynomial<i64> {
 /// let (p0, _b) = generate_polynomial(sigma.clone(), eta, b, n, Some(q));
 /// let (p1, _b) = generate_polynomial(sigma.clone(), eta, b, n, Some(q));
 /// let v = vec![p0, p1];
-/// vec_ntt(&v, params.zetas);
+/// vec_ntt(v, params.zetas);
 /// ```
-pub fn vec_ntt(v: &Vec<Polynomial<i64>>, zetas: Vec<i64>) -> Vec<Polynomial<i64>> {
+pub fn vec_ntt(v: Vec<Polynomial<i64>>, zetas: Vec<i64>) -> Vec<Polynomial<i64>> {
     v.iter()
-        .map(|poly| poly_ntt(poly, zetas.clone())) // Clone `zetas` for each polynomial
+        .map(|poly| poly_ntt(poly.clone(), zetas.clone())) // Clone `zetas` for each polynomial
         .collect()
 }
 
@@ -907,13 +937,13 @@ pub fn vec_ntt(v: &Vec<Polynomial<i64>>, zetas: Vec<i64>) -> Vec<Polynomial<i64>
 /// let (p0, _b) = generate_polynomial(sigma.clone(), eta, b, n, Some(q));
 /// let (p1, _b) = generate_polynomial(sigma.clone(), eta, b, n, Some(q));
 /// let v = vec![p0, p1];
-/// let v_ntt = vec_ntt(&v, params.zetas.clone());
-/// let v_recovered = vec_intt(&v_ntt, params.zetas.clone());
+/// let v_ntt = vec_ntt(v.clone(), params.zetas.clone());
+/// let v_recovered = vec_intt(v_ntt, params.zetas.clone());
 /// assert_eq!(v, v_recovered);
 /// ```
-pub fn vec_intt(v: &Vec<Polynomial<i64>>, zetas: Vec<i64>) -> Vec<Polynomial<i64>> {
+pub fn vec_intt(v: Vec<Polynomial<i64>>, zetas: Vec<i64>) -> Vec<Polynomial<i64>> {
     v.iter()
-        .map(|poly| poly_intt(poly, zetas.clone())) // Clone `zetas` for each polynomial
+        .map(|poly| poly_intt(poly.clone(), zetas.clone())) // Clone `zetas` for each polynomial
         .collect()
 }
 
@@ -938,9 +968,9 @@ pub fn vec_intt(v: &Vec<Polynomial<i64>>, zetas: Vec<i64>) -> Vec<Polynomial<i64
 /// let sigma = vec![0u8; 32];
 /// let b = 0;
 /// let (poly, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(3329));
-/// poly_ntt(&poly, params.zetas);
+/// poly_ntt(poly, params.zetas);
 /// ```
-pub fn poly_ntt(poly: &Polynomial<i64>, zetas: Vec<i64>) -> Polynomial<i64> {
+pub fn poly_ntt(poly: Polynomial<i64>, zetas: Vec<i64>) -> Polynomial<i64> {
     let mut coeffs = poly.coeffs().to_vec(); // Convert slice to Vec<i64>
 	coeffs.resize(256, 0); // Ensure uniform length
     let mut k = 1;
@@ -982,11 +1012,11 @@ pub fn poly_ntt(poly: &Polynomial<i64>, zetas: Vec<i64>) -> Polynomial<i64> {
 /// let sigma = vec![0u8; 32];
 /// let b = 0;
 /// let (poly, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(3329));
-/// let poly_ntt_forward = poly_ntt(&poly, params.zetas.clone());
-/// let poly_recovered = poly_intt(&poly_ntt_forward, params.zetas.clone());
+/// let poly_ntt_forward = poly_ntt(poly.clone(), params.zetas.clone());
+/// let poly_recovered = poly_intt(poly_ntt_forward, params.zetas.clone());
 /// assert_eq!(poly,poly_recovered);
 /// ```
-pub fn poly_intt(poly: &Polynomial<i64>, zetas: Vec<i64>) -> Polynomial<i64> {
+pub fn poly_intt(poly: Polynomial<i64>, zetas: Vec<i64>) -> Polynomial<i64> {
     let mut coeffs = poly.coeffs().to_vec(); // Convert slice to Vec<i64>
     coeffs.resize(256, 0); // Ensure uniform length
     let mut l = 2;
@@ -1072,18 +1102,17 @@ pub fn ntt_coefficient_multiplication(f_coeffs: Vec<i64>, g_coeffs: Vec<i64>, ze
 ///
 /// # Examples
 /// ```
-/// use ml_kem::utils::{mod_coeffs,generate_polynomial,poly_ntt, poly_intt, ntt_multiplication};
-/// use ring_lwe::utils::polymul;
+/// use ml_kem::utils::{mod_coeffs, generate_polynomial, poly_ntt, poly_intt, ntt_multiplication, polymul};
 /// let params = ml_kem::parameters::Parameters::mlkem512();
 /// let sigma = vec![0u8; 32];
 /// let b = 0;
-/// let (p0, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(3329));
-/// let (p1, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(3329));
-/// let p0_p1 = mod_coeffs(polymul(&p0, &p1, 3329, &params.f), 3329);
-/// let p0_ntt = poly_ntt(&p0, params.zetas.clone());
-/// let p1_ntt = poly_ntt(&p1, params.zetas.clone());
+/// let (p0, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(params.q));
+/// let (p1, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(params.q));
+/// let p0_p1 = mod_coeffs(polymul(p0.clone(), p1.clone(), params.q, params.f), params.q);
+/// let p0_ntt = poly_ntt(p0, params.zetas.clone());
+/// let p1_ntt = poly_ntt(p1, params.zetas.clone());
 /// let p0_ntt_p1_ntt = ntt_multiplication(p0_ntt, p1_ntt, params.zetas.clone());
-/// let p0_p1_recovered = poly_intt(&p0_ntt_p1_ntt, params.zetas.clone());
+/// let p0_p1_recovered = poly_intt(p0_ntt_p1_ntt, params.zetas.clone());
 /// assert_eq!(p0_p1, p0_p1_recovered);
 /// ```
 pub fn ntt_multiplication(f: Polynomial<i64>, g: Polynomial<i64>, zetas: Vec<i64>) -> Polynomial<i64> {
@@ -1104,11 +1133,11 @@ pub fn ntt_multiplication(f: Polynomial<i64>, g: Polynomial<i64>, zetas: Vec<i64
 /// * `f` - polynomial modulus
 /// # Returns
 /// * `result` - vector of polynomials
-pub fn add_vec(v0: &Vec<Polynomial<i64>>, v1: &Vec<Polynomial<i64>>, q: i64, f: &Polynomial<i64>) -> Vec<Polynomial<i64>> {
+pub fn add_vec(v0: Vec<Polynomial<i64>>, v1: Vec<Polynomial<i64>>, q: i64, f: Polynomial<i64>) -> Vec<Polynomial<i64>> {
 	assert!(v0.len() == v1.len());
 	let mut result = vec![];
 	for i in 0..v0.len() {
-		result.push(polyadd(&v0[i], &v1[i], q, &f));
+		result.push(polyadd(v0[i].clone(), v1[i].clone(), q, f.clone()));
 	}
 	result
 }
@@ -1135,14 +1164,15 @@ pub fn add_vec(v0: &Vec<Polynomial<i64>>, v1: &Vec<Polynomial<i64>>, q: i64, f: 
 /// let (p3, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(3329));
 /// let v0 = vec![p0, p1];
 /// let v1 = vec![p2, p3];
-/// let v0_dot_v1 = mul_vec_simple(&v0,&v1,params.q, &params.f, params.zetas.clone());
+/// let v0_dot_v1 = mul_vec_simple(v0,v1,params.q, params.f, params.zetas.clone());
 /// assert_eq!(v0_dot_v1.coeffs().len(), params.n);
 /// ```
-pub fn mul_vec_simple(v0: &Vec<Polynomial<i64>>, v1: &Vec<Polynomial<i64>>, q: i64, f: &Polynomial<i64>, zetas: Vec<i64>) -> Polynomial<i64> {
+pub fn mul_vec_simple(v0: Vec<Polynomial<i64>>, v1: Vec<Polynomial<i64>>, q: i64, f: Polynomial<i64>, zetas: Vec<i64>) -> Polynomial<i64> {
 	assert!(v0.len() == v1.len());
 	let mut result = Polynomial::new(vec![]);
 	for i in 0..v0.len() {
-		result = polyadd(&result, &ntt_multiplication(v0[i].clone(), v1[i].clone(), zetas.clone()), q, &f);
+		let v0_v1_mult = ntt_multiplication(v0[i].clone(), v1[i].clone(), zetas.clone());
+		result = polyadd(result, v0_v1_mult.clone(), q, f.clone());
 	}
 	mod_coeffs(result, q)
 }
@@ -1168,13 +1198,13 @@ pub fn mul_vec_simple(v0: &Vec<Polynomial<i64>>, v1: &Vec<Polynomial<i64>>, q: i
 /// let rho = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20];
 /// let rank = 2;
 /// let a_hat = generate_matrix_from_seed(rho,rank,params.n,false);
-/// let v = mul_mat_vec_simple(&a_hat, &v0, params.q, &params.f, params.zetas.clone());
+/// let v = mul_mat_vec_simple(a_hat, v0, params.q, params.f, params.zetas.clone());
 /// ```
-pub fn mul_mat_vec_simple(m: &Vec<Vec<Polynomial<i64>>>, v: &Vec<Polynomial<i64>>, q: i64, f: &Polynomial<i64>, zetas: Vec<i64>) -> Vec<Polynomial<i64>> {
+pub fn mul_mat_vec_simple(m: Vec<Vec<Polynomial<i64>>>, v: Vec<Polynomial<i64>>, q: i64, f: Polynomial<i64>, zetas: Vec<i64>) -> Vec<Polynomial<i64>> {
 	
 	let mut result = vec![];
 	for i in 0..m.len() {
-		result.push(mul_vec_simple(&m[i], &v, q, &f, zetas.clone()));
+		result.push(mul_vec_simple(m[i].clone(), v.clone(), q, f.clone(), zetas.clone()));
 	}
 	result
 }

@@ -64,17 +64,17 @@ impl MLKEM {
         let (e, _prf_count) = generate_error_vector(sigma.clone(), self.params.eta_1, prf_count, self.params.k, self.params.n);
 
         // the NTT of s as an element of a rank k module over the polynomial ring
-        let s_hat = vec_ntt(&s, self.params.zetas.clone());
+        let s_hat = vec_ntt(s, self.params.zetas.clone());
         // the NTT of e as an element of a rank k module over the polynomial ring
-        let e_hat = vec_ntt(&e, self.params.zetas.clone());
+        let e_hat = vec_ntt(e, self.params.zetas.clone());
         // A_hat @ s_hat + e_hat
-        let a_hat_s_hat = mul_mat_vec_simple(&a_hat, &s_hat, self.params.q, &self.params.f, self.params.zetas.clone());
-        let t_hat = add_vec(&a_hat_s_hat, &e_hat, self.params.q, &self.params.f);
+        let a_hat_s_hat = mul_mat_vec_simple(a_hat, s_hat.clone(), self.params.q, self.params.f.clone(), self.params.zetas.clone());
+        let t_hat = add_vec(a_hat_s_hat, e_hat, self.params.q, self.params.f.clone());
 
         // Encode the keys
-        let mut ek_pke = encode_vector(&t_hat, 12); // Encoding vec of polynomials to bytes
-        ek_pke.extend_from_slice(&rho); // append rho, output of hash function
-        let dk_pke = encode_vector(&s_hat, 12); // Encoding s_hat for dk_pke
+        let mut ek_pke = encode_vector(t_hat, 12); // Encoding vec of polynomials to bytes
+        ek_pke.extend(rho); // append rho, output of hash function
+        let dk_pke = encode_vector(s_hat, 12); // Encoding s_hat for dk_pke
 
         (ek_pke, dk_pke)
     }
@@ -104,13 +104,15 @@ impl MLKEM {
     /// ```
     /// use ml_kem::ml_kem::MLKEM;
     /// use ml_kem::utils::{encode_poly,compress_poly, generate_polynomial};
+    /// use polynomial_ring::Polynomial;
     /// let params = ml_kem::parameters::Parameters::mlkem512();
     /// let mlkem = MLKEM::new(params);
-    /// use ring_lwe::utils::gen_uniform_poly;
     /// let d = vec![0x01, 0x02, 0x03, 0x04];
     /// let (ek_pke, _dk_pke) = mlkem._k_pke_keygen(d);
-    /// let m_poly = gen_uniform_poly(mlkem.params.n, mlkem.params.q, None);
-    /// let m = encode_poly(&compress_poly(&m_poly,1),1);
+    /// let rand_bytes_os = (mlkem.params.random_bytes)(mlkem.params.n, None);
+    /// let rand_coeffs: Vec<i64> = rand_bytes_os.into_iter().map(|byte| byte as i64).collect();
+    /// let m_poly = Polynomial::new(rand_coeffs);
+    /// let m = encode_poly(compress_poly(m_poly,1),1);
     /// let r = vec![0x01, 0x02, 0x03, 0x04];
     /// let c = mlkem._k_pke_encrypt(ek_pke, m, r);
     /// ```
@@ -141,10 +143,10 @@ impl MLKEM {
         let rho = rho_slice.to_vec();
 
         // decode the vector of polynomials from bytes
-        let t_hat = decode_vector(&t_hat_bytes, self.params.k, 12);
+        let t_hat = decode_vector(t_hat_bytes.clone(), self.params.k, 12);
 
         // check that t_hat has been canonically encoded
-        if encode_vector(&t_hat,12) != t_hat_bytes {
+        if encode_vector(t_hat.clone(),12) != t_hat_bytes {
             return Err("Modulus check failed: t_hat does not encode correctly".to_string());
         }
 
@@ -158,24 +160,25 @@ impl MLKEM {
         let (e2, _prf_count) = generate_polynomial(r.clone(), self.params.eta_2, prf_count, self.params.n, None);
 
         // compute the NTT of the error vector y
-        let y_hat = vec_ntt(&y, self.params.zetas.clone());
+        let y_hat = vec_ntt(y, self.params.zetas.clone());
 
         // compute u = intt(a_hat.T * y_hat) + e1
-        let a_hat_t_y_hat = mul_mat_vec_simple(&a_hat_t, &y_hat, self.params.q, &self.params.f, self.params.zetas.clone());
-        let a_hat_t_y_hat_intt = vec_intt(&a_hat_t_y_hat, self.params.zetas.clone());
-        let u = add_vec(&a_hat_t_y_hat_intt, &e1, self.params.q, &self.params.f);
+        let a_hat_t_y_hat = mul_mat_vec_simple(a_hat_t, y_hat.clone(), self.params.q, self.params.f.clone(), self.params.zetas.clone());
+        let a_hat_t_y_hat_intt = vec_intt(a_hat_t_y_hat, self.params.zetas.clone());
+        let u = add_vec(a_hat_t_y_hat_intt, e1, self.params.q, self.params.f.clone());
 
         //decode the polynomial mu from the bytes m
-        let mu = decompress_poly(&decode_poly(m, 1),1);
+        let mu = decompress_poly(decode_poly(m, 1),1);
 
         //compute v = intt(t_hat.y_hat) + e2 + mu
-        let t_hat_dot_y_hat = mul_vec_simple(&t_hat, &y_hat, self.params.q, &self.params.f, self.params.zetas.clone());
-        let t_hat_dot_y_hat_intt = poly_intt(&t_hat_dot_y_hat, self.params.zetas.clone());
-        let v = polyadd(&polyadd(&t_hat_dot_y_hat_intt, &e2, self.params.q, &self.params.f), &mu, self.params.q, &self.params.f);
+        let t_hat_dot_y_hat = mul_vec_simple(t_hat, y_hat, self.params.q, self.params.f.clone(), self.params.zetas.clone());
+        let t_hat_dot_y_hat_intt = poly_intt(t_hat_dot_y_hat, self.params.zetas.clone());
+        let t_hat_dot_y_hat_intt_plus_e2 = polyadd(t_hat_dot_y_hat_intt.clone(), e2.clone(), self.params.q, self.params.f.clone());
+        let v = polyadd(t_hat_dot_y_hat_intt_plus_e2, mu, self.params.q, self.params.f.clone());
 
         // compress vec u, poly v by compressing coeffs, then encode to bytes using params du, dv
-        let c1 = encode_vector(&compress_vec(&u,self.params.du),self.params.du);
-        let c2 = encode_poly(&compress_poly(&v,self.params.dv),self.params.dv);
+        let c1 = encode_vector(compress_vec(u,self.params.du),self.params.du);
+        let c2 = encode_poly(compress_poly(v,self.params.dv),self.params.dv);
 
         //return c1 + c2, the concatenation of two encoded polynomials
         Ok([c1, c2].concat())
@@ -196,13 +199,15 @@ impl MLKEM {
     /// ```
     /// use ml_kem::ml_kem::MLKEM;
     /// use ml_kem::utils::{encode_poly,generate_polynomial,compress_poly};
-    /// use ring_lwe::utils::gen_uniform_poly;
+    /// use polynomial_ring::Polynomial;
     /// let params = ml_kem::parameters::Parameters::mlkem512();
     /// let mlkem = MLKEM::new(params);
     /// let d = vec![0x01, 0x02, 0x03, 0x04];
     /// let (ek_pke, dk_pke) = mlkem._k_pke_keygen(d);
-    /// let m_poly = gen_uniform_poly(mlkem.params.n, mlkem.params.q, None);
-    /// let m = encode_poly(&compress_poly(&m_poly,1),1);
+    /// let rand_bytes_os = (mlkem.params.random_bytes)(mlkem.params.n, None);
+    /// let rand_coeffs: Vec<i64> = rand_bytes_os.into_iter().map(|byte| byte as i64).collect();
+    /// let m_poly = Polynomial::new(rand_coeffs);
+    /// let m = encode_poly(compress_poly(m_poly,1),1);
     /// let r = vec![0x01, 0x02, 0x03, 0x04];
     /// let c = match mlkem._k_pke_encrypt(ek_pke, m.clone(), r) {
     ///    Ok(ciphertext) => ciphertext,
@@ -222,20 +227,20 @@ impl MLKEM {
         let c2 = c2.to_vec();
 
         // decode and decompress c1, c2, dk_pke into vector u, polynomial v, secret key
-        let u = decompress_vec(&decode_vector(&c1, self.params.k, self.params.du), self.params.du);
-        let v = decompress_poly(&decode_poly(c2, self.params.dv), self.params.dv);
-        let s_hat = decode_vector(&dk_pke, self.params.k, 12);
+        let u = decompress_vec(decode_vector(c1, self.params.k, self.params.du), self.params.du);
+        let v = decompress_poly(decode_poly(c2, self.params.dv), self.params.dv);
+        let s_hat = decode_vector(dk_pke, self.params.k, 12);
 
         // compute u_hat, the NTT of u
-        let u_hat = vec_ntt(&u, self.params.zetas.clone());
+        let u_hat = vec_ntt(u, self.params.zetas.clone());
 
         // compute w = v - (s_hat.u_hat).from_ntt()
-        let s_hat_dot_u_hat = mul_vec_simple(&s_hat, &u_hat, self.params.q, &self.params.f, self.params.zetas.clone());
-        let s_hat_dot_u_hat_intt = poly_intt(&s_hat_dot_u_hat, self.params.zetas.clone());
-        let w = polysub(&v, &s_hat_dot_u_hat_intt, self.params.q, &self.params.f);
+        let s_hat_dot_u_hat = mul_vec_simple(s_hat, u_hat, self.params.q, self.params.f.clone(), self.params.zetas.clone());
+        let s_hat_dot_u_hat_intt = poly_intt(s_hat_dot_u_hat, self.params.zetas.clone());
+        let w = polysub(v, s_hat_dot_u_hat_intt, self.params.q, self.params.f.clone());
 
         // compress and encode w to get message m
-        let m = encode_poly(&compress_poly(&w,1),1);
+        let m = encode_poly(compress_poly(w,1),1);
 
         m
 
@@ -378,7 +383,7 @@ impl MLKEM {
         // WARNING: for proper implementations, it is absolutely
         // vital that the selection between the key and garbage is
         // performed in constant time
-        let shared_k = select_bytes(&k_bar, &k_prime, c == c_prime);
+        let shared_k = select_bytes(k_bar, k_prime, c == c_prime);
 
         Ok(shared_k)
     }

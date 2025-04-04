@@ -3,7 +3,7 @@ mod tests {
     use ml_kem::parameters::Parameters;
     use ml_kem::utils::{encode_poly,compress_poly};
 	use ml_kem::ml_kem::MLKEM;
-    use ring_lwe::utils::gen_uniform_poly;
+    use polynomial_ring::Polynomial;
 
     // test for setting the DRBG seed
     #[test]
@@ -35,8 +35,10 @@ mod tests {
         let mlkem = MLKEM::new(params);
         let d = vec![0x01, 0x02, 0x03, 0x04];
         let (ek_pke, dk_pke) = mlkem._k_pke_keygen(d);
-        let m_poly = gen_uniform_poly(mlkem.params.n, mlkem.params.q, None);
-        let m = encode_poly(&compress_poly(&m_poly,1),1);
+        let rand_bytes_os = (mlkem.params.random_bytes)(mlkem.params.n, None);
+        let rand_coeffs: Vec<i64> = rand_bytes_os.into_iter().map(|byte| byte as i64).collect();
+        let m_poly = Polynomial::new(rand_coeffs);
+        let m = encode_poly(compress_poly(m_poly,1),1);
         let r = vec![0x01, 0x02, 0x03, 0x04];
         let c = match mlkem._k_pke_encrypt(ek_pke, m.clone(), r) {
             Ok(ciphertext) => ciphertext,
@@ -53,8 +55,10 @@ mod tests {
         let mlkem = MLKEM::new(params);
         let d = vec![0x01, 0x02, 0x03, 0x04];
         let (ek_pke, dk_pke) = mlkem._k_pke_keygen(d);
-        let m_poly = gen_uniform_poly(mlkem.params.n, mlkem.params.q, None);
-        let m = encode_poly(&compress_poly(&m_poly,1),1);
+        let rand_bytes_os = (mlkem.params.random_bytes)(mlkem.params.n, None);
+        let rand_coeffs: Vec<i64> = rand_bytes_os.into_iter().map(|byte| byte as i64).collect();
+        let m_poly = Polynomial::new(rand_coeffs);
+        let m = encode_poly(compress_poly(m_poly,1),1);
         let r = vec![0x01, 0x02, 0x03, 0x04];
         let c = match mlkem._k_pke_encrypt(ek_pke, m.clone(), r) {
             Ok(ciphertext) => ciphertext,
@@ -71,8 +75,10 @@ mod tests {
         let mlkem = MLKEM::new(params);
         let d = vec![0x01, 0x02, 0x03, 0x04];
         let (ek_pke, dk_pke) = mlkem._k_pke_keygen(d);
-        let m_poly = gen_uniform_poly(mlkem.params.n, mlkem.params.q, None);
-        let m = encode_poly(&compress_poly(&m_poly,1),1);
+        let rand_bytes_os = (mlkem.params.random_bytes)(mlkem.params.n, None);
+        let rand_coeffs: Vec<i64> = rand_bytes_os.into_iter().map(|byte| byte as i64).collect();
+        let m_poly = Polynomial::new(rand_coeffs);
+        let m = encode_poly(compress_poly(m_poly,1),1);
         let r = vec![0x01, 0x02, 0x03, 0x04];
         let c = match mlkem._k_pke_encrypt(ek_pke, m.clone(), r) {
             Ok(ciphertext) => ciphertext,
