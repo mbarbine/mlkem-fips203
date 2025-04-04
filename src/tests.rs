@@ -1,6 +1,7 @@
 #[cfg(test)]  // This makes the following module compile only during tests
 mod tests {
-    use ml_kem::utils::{Parameters,encode_poly,compress_poly};
+    use ml_kem::parameters::Parameters;
+    use ml_kem::utils::{encode_poly,compress_poly};
 	use ml_kem::ml_kem::MLKEM;
     use ring_lwe::utils::gen_uniform_poly;
 
@@ -29,8 +30,8 @@ mod tests {
 
     // Test for basic keygen/encapsulate/decapsulate
     #[test]
-    pub fn test_pke_keygen_encrypt_decrypt() {
-        let params = Parameters::default();
+    pub fn test_pke() {
+        let params = Parameters::mlkem512();
         let mlkem = MLKEM::new(params);
         let d = vec![0x01, 0x02, 0x03, 0x04];
         let (ek_pke, dk_pke) = mlkem._k_pke_keygen(d);

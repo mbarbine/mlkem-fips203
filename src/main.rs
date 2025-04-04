@@ -1,6 +1,6 @@
 use ml_kem::ml_kem::MLKEM;
-use ml_kem::utils::{Parameters,encode_poly,compress_poly};
-use ring_lwe::utils::gen_uniform_poly;
+use ml_kem::parameters::Parameters;
+use ml_kem::utils::{encode_poly,generate_polynomial};
 mod tests;
 
 fn main() {

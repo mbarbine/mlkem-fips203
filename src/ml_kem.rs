@@ -1,4 +1,5 @@
-use crate::utils::{Parameters, hash_g, hash_h, hash_j, generate_matrix_from_seed, generate_error_vector, generate_polynomial, encode_vector, vec_ntt, vec_intt, poly_intt, decode_vector, encode_poly, decode_poly, decompress_poly, compress_poly, compress_vec,mul_mat_vec_simple,mul_vec_simple, decompress_vec, polyadd, polysub, add_vec, select_bytes};
+use crate::utils::{hash_g, hash_h, hash_j, generate_matrix_from_seed, generate_error_vector, generate_polynomial, encode_vector, vec_ntt, vec_intt, poly_intt, decode_vector, encode_poly, decode_poly, decompress_poly, compress_poly, compress_vec,mul_mat_vec_simple,mul_vec_simple, decompress_vec, polyadd, polysub, add_vec, select_bytes};
+use crate::parameters::Parameters;
 use aes_ctr_drbg::DrbgCtx;
 
 pub struct MLKEM {
@@ -38,7 +39,7 @@ impl MLKEM {
     /// 
     /// # Example
     /// ```
-    /// use ml_kem::utils::Parameters;
+    /// use ml_kem::parameters::Parameters;
     /// use ml_kem::ml_kem::MLKEM;
     /// let params = Parameters::default();
     /// let mlkem = MLKEM::new(params);
@@ -103,7 +104,8 @@ impl MLKEM {
     /// # Example
     /// ```
     /// use ml_kem::ml_kem::MLKEM;
-    /// use ml_kem::utils::{Parameters,encode_poly,compress_poly, generate_polynomial};
+    /// use ml_kem::parameters::Parameters;
+    /// use ml_kem::utils::{encode_poly,compress_poly, generate_polynomial};
     /// let params = Parameters::default();
     /// let mlkem = MLKEM::new(params);
     /// use ring_lwe::utils::gen_uniform_poly;
@@ -195,7 +197,8 @@ impl MLKEM {
     /// # Examples
     /// ```
     /// use ml_kem::ml_kem::MLKEM;
-    /// use ml_kem::utils::{Parameters,encode_poly,generate_polynomial,compress_poly};
+    /// use ml_kem::parameters::Parameters;
+    /// use ml_kem::utils::{encode_poly,generate_polynomial,compress_poly};
     /// use ring_lwe::utils::gen_uniform_poly;
     /// let params = Parameters::default();
     /// let mlkem = MLKEM::new(params);
@@ -251,7 +254,7 @@ impl MLKEM {
     /// `(Vec<u8>, Vec<u8>)` - encapsulation key and decapsulation key (ek, dk)
     /// # Examples
     /// ```
-    /// let params = ml_kem::utils::Parameters::default();
+    /// let params = ml_kem::parameters::Parameters::default();
     /// let mlkem = ml_kem::ml_kem::MLKEM::new(params);
     /// let d = vec![0x00; 32];
     /// let z = vec![0x01; 32];
@@ -277,7 +280,7 @@ impl MLKEM {
     /// `(Vec<u8>, Vec<u8>)` - (32 byte shared key `K`, 32*(d_u*k+d_v)-byte ciphertext `c`)
     /// # Examples
     /// ```
-    /// let params = ml_kem::utils::Parameters::default();
+    /// let params = ml_kem::parameters::Parameters::default();
     /// let mlkem = ml_kem::ml_kem::MLKEM::new(params);
     /// let d = vec![0x00; 32];
     /// let z = vec![0x01; 32];
@@ -306,7 +309,7 @@ impl MLKEM {
     /// `Vec<u8>` - 32 byte decapulated shared key
     /// # Examples
     /// ```
-    /// let params = ml_kem::utils::Parameters::default();
+    /// let params = ml_kem::parameters::Parameters::default();
     /// let mlkem = ml_kem::ml_kem::MLKEM::new(params);
     /// let d = vec![0x00; 32];
     /// let z = vec![0x01; 32];
@@ -391,7 +394,7 @@ impl MLKEM {
     /// `(Vec<u8>, Vec<u8>)` - encapsulation key and decapsulation key (ek, dk)
     /// # Examples
     /// ```
-    /// let params = ml_kem::utils::Parameters::default();
+    /// let params = ml_kem::parameters::Parameters::default();
     /// let mut mlkem = ml_kem::ml_kem::MLKEM::new(params);
     /// let (ek, dk) = mlkem.keygen();
     /// ```
@@ -412,7 +415,7 @@ impl MLKEM {
     /// `(Vec<u8>, Vec<u8>)` - encapsulation key and decapsulation key (ek, dk)
     /// # Examples
     /// ```
-    /// let params = ml_kem::utils::Parameters::default();
+    /// let params = ml_kem::parameters::Parameters::default();
     /// let mut mlkem = ml_kem::ml_kem::MLKEM::new(params);
     /// let seed = vec![0x00; 64];
     /// let (ek, dk) = match mlkem.key_derive(seed) {
@@ -439,7 +442,7 @@ impl MLKEM {
     /// `(Vec<u8>, Vec<u8>)` - (32 byte shared key `K`, 32*(d_u*k+d_v)-byte ciphertext `c`)
     /// # Examples
     /// ```
-    /// let params = ml_kem::utils::Parameters::default();
+    /// let params = ml_kem::parameters::Parameters::default();
     /// let mut mlkem = ml_kem::ml_kem::MLKEM::new(params);
     /// let (ek, _dk) = mlkem.keygen();
     /// let (shared_k,c) = match mlkem.encaps(ek) {
@@ -463,7 +466,7 @@ impl MLKEM {
     /// `Vec<u8>` - 32 byte decapulated shared key
     /// # Examples
     /// ```
-    /// let params = ml_kem::utils::Parameters::default();
+    /// let params = ml_kem::parameters::Parameters::default();
     /// let mut mlkem = ml_kem::ml_kem::MLKEM::new(params);
     /// let (ek, dk) = mlkem.keygen();
     /// let (shared_k,c) = match mlkem.encaps(ek) {

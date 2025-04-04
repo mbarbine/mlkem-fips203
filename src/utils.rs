@@ -4,57 +4,8 @@ use rs_sha3_256::{Sha3_256Hasher, HasherContext};
 use rs_sha3_512::Sha3_512Hasher;
 use rs_shake128::Shake128Hasher;
 use rs_shake256::Shake256Hasher;
-use getrandom::getrandom;
-use aes_ctr_drbg::DrbgCtx;
 use num_bigint::BigUint;
 use num_traits::Zero;
-use ntt::mod_exp;
-
-
-/// default parameters for module-LWE
-pub struct Parameters {
-	/// degree of the polynomials
-    pub n: usize,
-	/// Ciphertext modulus
-    pub q: i64,
-	/// Module rank	
-    pub k: usize,
-	/// centered binomial distribution width
-	pub eta_1: usize,
-	/// centered binomial distribution width
-	pub eta_2: usize,
-	/// du
-	pub du: usize,
-	/// dv
-	pub dv: usize,
-	/// Polynomial modulus
-    pub f: Polynomial<i64>,
-	/// generate random bytes
-	pub random_bytes: fn(usize, Option<&mut DrbgCtx>) -> Vec<u8>,
-	/// ntt zeta values
-	pub zetas: Vec<i64>,
-}
-
-/// default parameters for module-LWE
-impl Default for Parameters {
-    fn default() -> Self {
-        let n = 256;
-        let q = 3329;
-        let k = 4;
-		let eta_1 = 3;
-		let eta_2 = 2;
-		let du = 10;
-		let dv = 4;
-        let mut poly_vec = vec![0i64;n+1];
-        poly_vec[0] = 1;
-        poly_vec[n] = 1;
-        let f = Polynomial::new(poly_vec);
-        let zetas: Vec<i64> = (0..128)
-        	.map(|i| mod_exp(17, bit_reverse(i, 7), 3329))
-        	.collect();
-        Parameters { n, q, k, eta_1, eta_2, du, dv, f, zetas, random_bytes: gen_random_bytes }
-    }
-}
 
 /// Selects between the bytes in `a` or `b` based on `cond`.
 ///
@@ -176,19 +127,6 @@ pub fn bit_reverse(i: i64, k: usize) -> i64 {
     }
 
     reversed
-}
-
-/// generate random bytes using `getrandom` crate
-/// or using the DRBG if a mutable reference is provided
-fn gen_random_bytes(size: usize, drbg: Option<&mut DrbgCtx>) -> Vec<u8> {
-	let mut out = vec![0; size];
-	if let Some(drbg) = drbg {
-		drbg.get_random(&mut out);
-	}
-	else {
-		getrandom(&mut out).expect("Failed to get random bytes");
-	}
-	out
 }
 
 /// Sample coefficients of a polynomial (assummed the NTT transformed version) from input bytes
@@ -923,8 +861,8 @@ pub fn decompress_poly(poly: &Polynomial<i64>, d: usize) -> Polynomial<i64> {
 /// # Example
 /// ```
 /// use ml_kem::utils::{generate_polynomial, vec_ntt};
-/// use ml_kem::utils::Parameters;
-/// let params = Parameters::default();
+/// use ml_kem::parameters::Parameters;
+/// let params = Parameters::mlkem512();
 /// let sigma = vec![0u8; 32];
 /// let eta = 3;
 /// let b = 0;
@@ -959,8 +897,8 @@ pub fn vec_ntt(v: &Vec<Polynomial<i64>>, zetas: Vec<i64>) -> Vec<Polynomial<i64>
 /// # Example
 /// ```
 /// use ml_kem::utils::{generate_polynomial, vec_ntt, vec_intt};
-/// use ml_kem::utils::Parameters;
-/// let params = Parameters::default();
+/// use ml_kem::parameters::Parameters;
+/// let params = Parameters::mlkem512();
 /// let sigma = vec![0u8; 32];
 /// let eta = 3;
 /// let b = 0;
@@ -995,8 +933,8 @@ pub fn vec_intt(v: &Vec<Polynomial<i64>>, zetas: Vec<i64>) -> Vec<Polynomial<i64
 /// # Examples
 /// ```
 /// use ml_kem::utils::{generate_polynomial,poly_ntt};
-/// use ml_kem::utils::Parameters;
-/// let params = Parameters::default();
+/// use ml_kem::parameters::Parameters;
+/// let params = Parameters::mlkem512();
 /// let sigma = vec![0u8; 32];
 /// let b = 0;
 /// let (poly, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(3329));
@@ -1040,8 +978,7 @@ pub fn poly_ntt(poly: &Polynomial<i64>, zetas: Vec<i64>) -> Polynomial<i64> {
 /// # Examples
 /// ```
 /// use ml_kem::utils::{generate_polynomial,poly_ntt,poly_intt};
-/// use ml_kem::utils::Parameters;
-/// let params = Parameters::default();
+/// let params = ml_kem::parameters::Parameters::mlkem512();
 /// let sigma = vec![0u8; 32];
 /// let b = 0;
 /// let (poly, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(3329));
@@ -1136,9 +1073,8 @@ pub fn ntt_coefficient_multiplication(f_coeffs: Vec<i64>, g_coeffs: Vec<i64>, ze
 /// # Examples
 /// ```
 /// use ml_kem::utils::{mod_coeffs,generate_polynomial,poly_ntt, poly_intt, ntt_multiplication};
-/// use ml_kem::utils::Parameters;
 /// use ring_lwe::utils::polymul;
-/// let params = Parameters::default();
+/// let params = ml_kem::parameters::Parameters::mlkem512();
 /// let sigma = vec![0u8; 32];
 /// let b = 0;
 /// let (p0, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(3329));
@@ -1190,8 +1126,7 @@ pub fn add_vec(v0: &Vec<Polynomial<i64>>, v1: &Vec<Polynomial<i64>>, q: i64, f: 
 /// # Examples
 /// ```
 /// use ml_kem::utils::{generate_polynomial,mul_vec_simple};
-/// use ml_kem::utils::Parameters;
-/// let params = Parameters::default();
+/// let params = ml_kem::parameters::Parameters::mlkem512();
 /// let sigma = vec![0u8; 32];
 /// let b = 0;
 /// let (p0, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(3329));
@@ -1224,8 +1159,7 @@ pub fn mul_vec_simple(v0: &Vec<Polynomial<i64>>, v1: &Vec<Polynomial<i64>>, q: i
 /// # Examples
 /// ```
 /// use ml_kem::utils::{generate_polynomial,mul_vec_simple,generate_matrix_from_seed,mul_mat_vec_simple};
-/// use ml_kem::utils::Parameters;
-/// let params = Parameters::default();
+/// let params = ml_kem::parameters::Parameters::mlkem512();
 /// let sigma = vec![0u8; 32];
 /// let b = 0;
 /// let (p0, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(3329));
