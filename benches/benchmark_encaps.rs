@@ -7,7 +7,7 @@ fn bench_encaps_512(c: &mut Criterion) {
     let params = Parameters::mlkem512();
     let mut mlkem = MLKEM::new(params);
     let (ek, _dk) = mlkem.keygen();
-    c.bench_function("encaps", |b| {
+    c.bench_function("encaps_512", |b| {
         b.iter(|| {
             match mlkem.encaps(ek.clone()) {
                 Ok(ciphertext) => ciphertext,
@@ -22,7 +22,7 @@ fn bench_encaps_768(c: &mut Criterion) {
     let params = Parameters::mlkem768();
     let mut mlkem = MLKEM::new(params);
     let (ek, _dk) = mlkem.keygen();
-    c.bench_function("encaps", |b| {
+    c.bench_function("encaps_768", |b| {
         b.iter(|| {
             match mlkem.encaps(ek.clone()) {
                 Ok(ciphertext) => ciphertext,
@@ -37,7 +37,7 @@ fn bench_encaps_1024(c: &mut Criterion) {
     let params = Parameters::mlkem1024();
     let mut mlkem = MLKEM::new(params);
     let (ek, _dk) = mlkem.keygen();
-    c.bench_function("encaps", |b| {
+    c.bench_function("encaps_1024", |b| {
         b.iter(|| {
             match mlkem.encaps(ek.clone()) {
                 Ok(ciphertext) => ciphertext,

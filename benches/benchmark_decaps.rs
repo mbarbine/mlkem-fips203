@@ -11,7 +11,7 @@ fn bench_decaps_512(crit: &mut Criterion) {
         Ok(ciphertext) => ciphertext,
         Err(e) => panic!("Encryption failed: {}", e),
     };
-    crit.bench_function("decaps", |b| {
+    crit.bench_function("decaps_512", |b| {
         b.iter(|| {
             match mlkem.decaps(dk.clone(),c.clone()) {
                 Ok(decapsulated_shared_key) => decapsulated_shared_key,
@@ -30,7 +30,7 @@ fn bench_decaps_768(crit: &mut Criterion) {
         Ok(ciphertext) => ciphertext,
         Err(e) => panic!("Encryption failed: {}", e),
     };
-    crit.bench_function("decaps", |b| {
+    crit.bench_function("decaps_768", |b| {
         b.iter(|| {
             match mlkem.decaps(dk.clone(),c.clone()) {
                 Ok(decapsulated_shared_key) => decapsulated_shared_key,
@@ -49,7 +49,7 @@ fn bench_decaps_1024(crit: &mut Criterion) {
         Ok(ciphertext) => ciphertext,
         Err(e) => panic!("Encryption failed: {}", e),
     };
-    crit.bench_function("decaps", |b| {
+    crit.bench_function("decaps_1024", |b| {
         b.iter(|| {
             match mlkem.decaps(dk.clone(),c.clone()) {
                 Ok(decapsulated_shared_key) => decapsulated_shared_key,
