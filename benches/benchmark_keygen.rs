@@ -6,7 +6,7 @@ use ml_kem::parameters::Parameters;
 fn bench_keygen_512(c: &mut Criterion) {
     let params = Parameters::mlkem512();
     let mut mlkem = MLKEM::new(params);
-    c.bench_function("keygen", |b| {
+    c.bench_function("keygen_512", |b| {
         b.iter(|| mlkem.keygen())
     });
 }
@@ -15,7 +15,7 @@ fn bench_keygen_512(c: &mut Criterion) {
 fn bench_keygen_768(c: &mut Criterion) {
     let params = Parameters::mlkem768();
     let mut mlkem = MLKEM::new(params);
-    c.bench_function("keygen", |b| {
+    c.bench_function("keygen_768", |b| {
         b.iter(|| mlkem.keygen())
     });
 }
@@ -24,7 +24,7 @@ fn bench_keygen_768(c: &mut Criterion) {
 fn bench_keygen_1024(c: &mut Criterion) {
     let params = Parameters::mlkem1024();
     let mut mlkem = MLKEM::new(params);
-    c.bench_function("keygen", |b| {
+    c.bench_function("keygen_1024", |b| {
         b.iter(|| mlkem.keygen())
     });
 }
