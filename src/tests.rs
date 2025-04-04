@@ -1,13 +1,14 @@
 #[cfg(test)]  // This makes the following module compile only during tests
 mod tests {
-    use ml_kem::utils::{Parameters,encode_poly,compress_poly};
+    use ml_kem::parameters::Parameters;
+    use ml_kem::utils::{encode_poly,compress_poly};
 	use ml_kem::ml_kem::MLKEM;
     use ring_lwe::utils::gen_uniform_poly;
 
     // test for setting the DRBG seed
     #[test]
     pub fn test_set_drbg_seed() {
-        let params = Parameters::default();
+        let params = Parameters::mlkem512();
         let mut mlkem = MLKEM::new(params);
 
         // Generate random bytes before setting DRBG seed (should use system randomness)
@@ -29,29 +30,62 @@ mod tests {
 
     // Test for basic keygen/encapsulate/decapsulate
     #[test]
-    pub fn test_pke_keygen_encrypt_decrypt() {
-        let params = Parameters::default();
+    pub fn test_pke_512() {
+        let params = Parameters::mlkem512();
         let mlkem = MLKEM::new(params);
         let d = vec![0x01, 0x02, 0x03, 0x04];
         let (ek_pke, dk_pke) = mlkem._k_pke_keygen(d);
         let m_poly = gen_uniform_poly(mlkem.params.n, mlkem.params.q, None);
         let m = encode_poly(&compress_poly(&m_poly,1),1);
         let r = vec![0x01, 0x02, 0x03, 0x04];
-    
-        // Handle encryption result properly
         let c = match mlkem._k_pke_encrypt(ek_pke, m.clone(), r) {
             Ok(ciphertext) => ciphertext,
             Err(e) => panic!("Encryption failed: {}", e),
         };
-    
         let m_dec = mlkem._k_pke_decrypt(dk_pke, c);
         assert_eq!(m, m_dec);
     }
 
     // Test for basic keygen/encapsulate/decapsulate
     #[test]
-    fn test_keygen_encaps_decaps() {
-        let params = Parameters::default();
+    pub fn test_pke_768() {
+        let params = Parameters::mlkem768();
+        let mlkem = MLKEM::new(params);
+        let d = vec![0x01, 0x02, 0x03, 0x04];
+        let (ek_pke, dk_pke) = mlkem._k_pke_keygen(d);
+        let m_poly = gen_uniform_poly(mlkem.params.n, mlkem.params.q, None);
+        let m = encode_poly(&compress_poly(&m_poly,1),1);
+        let r = vec![0x01, 0x02, 0x03, 0x04];
+        let c = match mlkem._k_pke_encrypt(ek_pke, m.clone(), r) {
+            Ok(ciphertext) => ciphertext,
+            Err(e) => panic!("Encryption failed: {}", e),
+        };
+        let m_dec = mlkem._k_pke_decrypt(dk_pke, c);
+        assert_eq!(m, m_dec);
+    }
+
+    // Test for basic keygen/encapsulate/decapsulate
+    #[test]
+    pub fn test_pke_1024() {
+        let params = Parameters::mlkem1024();
+        let mlkem = MLKEM::new(params);
+        let d = vec![0x01, 0x02, 0x03, 0x04];
+        let (ek_pke, dk_pke) = mlkem._k_pke_keygen(d);
+        let m_poly = gen_uniform_poly(mlkem.params.n, mlkem.params.q, None);
+        let m = encode_poly(&compress_poly(&m_poly,1),1);
+        let r = vec![0x01, 0x02, 0x03, 0x04];
+        let c = match mlkem._k_pke_encrypt(ek_pke, m.clone(), r) {
+            Ok(ciphertext) => ciphertext,
+            Err(e) => panic!("Encryption failed: {}", e),
+        };
+        let m_dec = mlkem._k_pke_decrypt(dk_pke, c);
+        assert_eq!(m, m_dec);
+    }
+
+    // Test for basic keygen/encapsulate/decapsulate
+    #[test]
+    fn test_keygen_encaps_decaps_512() {
+        let params = Parameters::mlkem512();
         let mut mlkem = MLKEM::new(params);
         let (ek, dk) = mlkem.keygen();
         let (shared_k,c) = match mlkem.encaps(ek) {
@@ -63,5 +97,39 @@ mod tests {
             Err(e) => panic!("Decryption failed: {}", e),
          };
          assert_eq!(shared_k, shared_k_decaps);
+    }
+
+    // Test for basic keygen/encapsulate/decapsulate
+    #[test]
+    fn test_keygen_encaps_decaps_768() {
+        let params = Parameters::mlkem768();
+        let mut mlkem = MLKEM::new(params);
+        let (ek, dk) = mlkem.keygen();
+        let (shared_k,c) = match mlkem.encaps(ek) {
+            Ok(ciphertext) => ciphertext,
+            Err(e) => panic!("Encryption failed: {}", e),
+        };
+        let shared_k_decaps = match mlkem.decaps(dk,c) {
+            Ok(decapsulated_shared_key) => decapsulated_shared_key,
+            Err(e) => panic!("Decryption failed: {}", e),
+            };
+            assert_eq!(shared_k, shared_k_decaps);
+    }
+
+    // Test for basic keygen/encapsulate/decapsulate
+    #[test]
+    fn test_keygen_encaps_decaps_1024() {
+        let params = Parameters::mlkem1024();
+        let mut mlkem = MLKEM::new(params);
+        let (ek, dk) = mlkem.keygen();
+        let (shared_k,c) = match mlkem.encaps(ek) {
+            Ok(ciphertext) => ciphertext,
+            Err(e) => panic!("Encryption failed: {}", e),
+        };
+        let shared_k_decaps = match mlkem.decaps(dk,c) {
+            Ok(decapsulated_shared_key) => decapsulated_shared_key,
+            Err(e) => panic!("Decryption failed: {}", e),
+            };
+            assert_eq!(shared_k, shared_k_decaps);
     }
 }
