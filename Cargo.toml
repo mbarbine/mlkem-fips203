@@ -2,6 +2,11 @@
 name = "ml-kem"
 version = "0.1.0"
 edition = "2021"
+description = "MLKEM [512, 768, 1024] module-lattice key encapsulation mechanism following the FIPS 203 standard."
+license = "MIT"
+documentation = "https://docs.rs/ml-kem"
+homepage = "https://github.com/lattice-based-cryptography/ml-kem"
+repository = "https://github.com/lattice-based-cryptography/ml-kem"
 
 [dependencies]
 polynomial-ring = "0.5.0"
@@ -14,3 +19,21 @@ aes_ctr_drbg = "0.0.2"
 getrandom = "0.2"
 num-bigint = "0.4"
 num-traits = "0.2"
+
+[dev-dependencies]
+criterion = "0.5.1"
+
+[[bench]]
+name = "benchmark_keygen"
+path = "benches/benchmark_keygen.rs"
+harness = false
+
+[[bench]]
+name = "benchmark_encaps"
+path = "benches/benchmark_encaps.rs"
+harness = false
+
+[[bench]]
+name = "benchmark_decaps"
+path = "benches/benchmark_decaps.rs"
+harness = false
