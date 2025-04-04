@@ -270,7 +270,7 @@ impl MLKEM {
     /// Uses the encapsulation key and randomness to generate a key and an
     /// associated ciphertext following Algorithm 17 (FIPS 203)
     /// 
-    /// # Arguemnts
+    /// # Arguments
     /// * `ek` - (384*k+32)-byte encoded encapsulation key
     /// * `m` - 32 bytes of randomness
     /// # Returns
@@ -382,5 +382,51 @@ impl MLKEM {
 
         Ok(shared_k)
     }
-
+	
+	/// Generate an encapsulation key and corresponding decapsulation key
+	/// following Algorithm 19 (FIPS 203)
+	///
+	/// # Arguments
+    /// # Returns
+    /// `(Vec<u8>, Vec<u8>)` - encapsulation key and decapsulation key (ek, dk)
+    /// # Examples
+    /// ```
+    /// let params = ml_kem::utils::Parameters::default();
+    /// let mut mlkem = ml_kem::ml_kem::MLKEM::new(params);
+    /// let (ek, dk) = mlkem.keygen();
+    /// ```
+	pub fn keygen(&mut self) -> (Vec<u8>, Vec<u8>) {
+		let d = (self.params.random_bytes)(32, self.drbg.as_mut());
+		let z = (self.params.random_bytes)(32, self.drbg.as_mut());
+		let (ek, dk) = self._keygen_internal(d,z);
+		return (ek, dk)
+	}
+	
+	/// Derive an encapsulation key and corresponding decapsulation key
+	/// following the approach from Section 7.1 (FIPS 203)
+    /// with storage of the ``seed`` value for later expansion.
+	///
+	/// # Arguments
+	/// * `seed` - 64 byte concatenation of the `d` and `z` values
+    /// # Returns
+    /// `(Vec<u8>, Vec<u8>)` - encapsulation key and decapsulation key (ek, dk)
+    /// # Examples
+    /// ```
+    /// let params = ml_kem::utils::Parameters::default();
+    /// let mut mlkem = ml_kem::ml_kem::MLKEM::new(params);
+	/// let seed = vec![0x00; 64];
+    /// let (ek, dk) = match mlkem.key_derive(seed) {
+    ///    Ok((e_key, d_key)) => (e_key, d_key),
+    ///    Err(e) => panic!("Key derive failed: {}", e),
+    /// };
+    /// ```
+	pub fn key_derive(&self, seed: Vec<u8>) -> Result<(Vec<u8>, Vec<u8>), String> {
+        if seed.len() != 64 {
+            return Err("The seed must be 64 bytes long".to_string());
+        }
+		let d = seed[..32].to_vec();
+		let z = seed[32..].to_vec();
+		let (ek, dk) = self._keygen_internal(d, z);
+		Ok((ek, dk))
+	}
 }
