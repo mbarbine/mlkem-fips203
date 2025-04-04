@@ -21,6 +21,7 @@ To build the binary.
 - Performs `keygen`, `encrypt`, `decrypt` for a test message.
 - Performs `keygen`, `encaps`, `decaps` to encapsulate and decapsulate keys.
 - Sets the DRBG seed and generates random bytes using DRBG.
+- Runs doctests for every public function.
 
 `cargo bench`
 
@@ -30,11 +31,11 @@ Runs the three benchmarks for `keygen`, `encaps`, `decaps`.
 
 Runs the main file which performs a basic PKE `keygen`, `encrypt`, `decrypt` for a random message, and `keygen`, `encaps`, `decaps`.
 
-**Parameters**: A global parameter `q=3329`, the Kyber prime, is set. The polynomial size is set to `n=256`. We work over the ring R_q = Z_q[x]/(x^n+1).
+**Parameters**: A global parameter `q=3329`, the Kyber prime, is set. The polynomial size is set to `n=256`. We work over the ring `R_q = Z_q[x]/(x^n+1)`.
 
-MLKEM512: `k = 2`, `eta_1 = 3`, `eta_2 = 2`, `du = 10`, `dv = 4`
-MLKEM768: `k = 3`, `eta_1 = 2`, `eta_2 = 2`, `du = 10`, `dv = 4`
-MLKEM1024: `k = 4`, `eta_1 = 2`, `eta_2 = 2`, `du = 11`, `dv = 5`
+- MLKEM512: `k = 2`, `eta_1 = 3`, `eta_2 = 2`, `du = 10`, `dv = 4`
+- MLKEM768: `k = 3`, `eta_1 = 2`, `eta_2 = 2`, `du = 10`, `dv = 4`
+- MLKEM1024: `k = 4`, `eta_1 = 2`, `eta_2 = 2`, `du = 11`, `dv = 5`
 
 - `k` is the module rank
 - `eta` controls the `cbd` (centered binomial distribution) for randomness
@@ -71,8 +72,8 @@ let shared_k_decaps = match mlkem.decaps(dk,c) { // decapsulate the shared key, 
 
 **Benchmarks**: All benchmarks were averaged over at least 100 runs using the `criterion` benchmarking crate.
 
-params | keygen    | encaps    | decaps    |
+ MLKEM | keygen    | encaps    | decaps    |
 -------|-----------|-----------|-----------|
-512    | 239.00 µs | 362.94 µs | 513.25 µs |
-768    | 394.09 µs | 528.75 µs | 745.37 µs |
-1024   | 526.46 µs | 711.49 ms | 987.81 µs |
+ 512   | 239.00 µs | 362.94 µs | 513.25 µs |
+ 768   | 394.09 µs | 528.75 µs | 745.37 µs |
+ 1024  | 526.46 µs | 711.49 ms | 987.81 µs |
