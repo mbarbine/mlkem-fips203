@@ -1,6 +1,6 @@
-use ml_kem::ml_kem::MLKEM;
-use ml_kem::parameters::Parameters;
-use ml_kem::utils::{encode_poly,compress_poly};
+use mlkem_fips203::ml_kem::MLKEM;
+use mlkem_fips203::parameters::Parameters;
+use mlkem_fips203::utils::{encode_poly,compress_poly};
 use polynomial_ring::Polynomial;
 mod tests;
 

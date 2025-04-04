@@ -13,7 +13,7 @@ use num_traits::Zero;
 ///
 /// # Examples
 /// ```
-/// use ml_kem::utils::select_bytes;
+/// use mlkem_fips203::utils::select_bytes;
 /// let a = vec![10, 20, 30];
 /// let b = vec![100, 110, 120];
 ///
@@ -127,7 +127,7 @@ pub fn polymul(x : Polynomial<i64>, y : Polynomial<i64>, q : i64, f : Polynomial
 /// # Examples
 ///
 /// ```
-/// use ml_kem::utils::bit_reverse;
+/// use mlkem_fips203::utils::bit_reverse;
 /// let result = bit_reverse(13, 4); // 13 in 4-bit binary is 1101, reversed -> 1011 (11)
 /// assert_eq!(result, 11);
 /// ```
@@ -161,7 +161,7 @@ pub fn bit_reverse(i: i64, k: usize) -> i64 {
 ///
 /// # Example
 /// ```
-/// use ml_kem::utils::ntt_sample;
+/// use mlkem_fips203::utils::ntt_sample;
 /// let input_bytes = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06];
 /// let n = 10;
 /// let result = ntt_sample(input_bytes, n);
@@ -211,7 +211,7 @@ pub fn ntt_sample(input_bytes: Vec<u8>, n: usize) -> Vec<i64> {
 ///
 /// # Example
 /// ```
-/// use ml_kem::utils::hash_h;
+/// use mlkem_fips203::utils::hash_h;
 /// let input = vec![0xFF; 8];
 /// let result = hash_h(input);
 /// assert_eq!(result.len(), 32); // Ensure the result is 32 bytes long
@@ -238,7 +238,7 @@ pub fn hash_h(m: Vec<u8>) -> Vec<u8> {
 ///
 /// # Example
 /// ```
-/// use ml_kem::utils::hash_j;
+/// use mlkem_fips203::utils::hash_j;
 /// let input = vec![0x01, 0x02, 0x03, 0x04];
 /// let result = hash_j(input);
 /// assert_eq!(result.len(), 32); // Ensure the result is 32 bytes long
@@ -263,7 +263,7 @@ pub fn hash_j(m: Vec<u8>) -> Vec<u8> {
 ///
 /// # Example
 /// ```
-/// use ml_kem::utils::hash_g;
+/// use mlkem_fips203::utils::hash_g;
 /// let input = vec![0x01, 0x02, 0x03, 0x04];
 /// let (output1, output2) = hash_g(input);
 /// assert_eq!(output1.len(), 32); // Ensure the first part is 32 bytes long
@@ -292,7 +292,7 @@ pub fn hash_g(m: Vec<u8>) -> (Vec<u8>, Vec<u8>) {
 ///
 /// # Example
 /// ```
-/// use ml_kem::utils::prf_2;
+/// use mlkem_fips203::utils::prf_2;
 /// let s = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20, 0x21, 0x22];
 /// let b = 0xFF;
 /// let result = prf_2(s, b);
@@ -323,7 +323,7 @@ pub fn prf_2(s: Vec<u8>, b: u8) -> Vec<u8> {
 ///
 /// # Example
 /// ```
-/// use ml_kem::utils::prf_3;
+/// use mlkem_fips203::utils::prf_3;
 /// let s = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20, 0x21, 0x22];
 /// let b = 0xFF;
 /// let result = prf_3(s, b);
@@ -354,7 +354,7 @@ pub fn prf_3(s: Vec<u8>, b: u8) -> Vec<u8> {
 ///
 /// # Example
 /// ```
-/// use ml_kem::utils::xof;
+/// use mlkem_fips203::utils::xof;
 /// let bytes32 = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20];
 /// let i = 0x01;
 /// let j = 0x02;
@@ -388,7 +388,7 @@ pub fn xof(bytes32: Vec<u8>, i: u8, j: u8) -> Vec<u8> {
 ///
 /// # Example
 /// ```
-/// use ml_kem::utils::generate_matrix_from_seed;
+/// use mlkem_fips203::utils::generate_matrix_from_seed;
 /// let rho = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20];
 /// let rank = 2;
 /// let n = 8;
@@ -451,7 +451,7 @@ pub fn matrix_transpose(m: Vec<Vec<Polynomial<i64>>>) -> Vec<Vec<Polynomial<i64>
 ///
 /// # Example
 /// ```
-/// use ml_kem::utils::cbd;
+/// use mlkem_fips203::utils::cbd;
 /// let n = 8;
 /// let eta = 3;
 /// let input_bytes = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06];
@@ -490,7 +490,7 @@ pub fn cbd(input_bytes: Vec<u8>, eta: usize, n:usize) -> Polynomial<i64> {
 ///
 /// # Example
 /// ```
-/// use ml_kem::utils::generate_error_vector;
+/// use mlkem_fips203::utils::generate_error_vector;
 /// let sigma = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20, 0x21, 0x22];
 /// let eta = 3;
 /// let b = 0x01;
@@ -546,7 +546,7 @@ pub fn generate_error_vector(
 ///
 /// # Example
 /// ```
-/// use ml_kem::utils::generate_polynomial;
+/// use mlkem_fips203::utils::generate_polynomial;
 ///
 /// let sigma = vec![0u8; 32]; // Example seed
 /// let eta = 3;
@@ -603,7 +603,7 @@ pub fn generate_polynomial(
 /// # Example
 /// ```
 /// use polynomial_ring::Polynomial;
-/// use ml_kem::utils::{generate_polynomial,encode_poly};
+/// use mlkem_fips203::utils::{generate_polynomial,encode_poly};
 /// let sigma = vec![0u8; 32]; // Example seed
 /// let eta = 3;
 /// let n = 0;
@@ -647,7 +647,7 @@ pub fn encode_poly(poly: Polynomial<i64>, d: usize) -> Vec<u8> {
 /// # Example
 /// ```
 /// use polynomial_ring::Polynomial;
-/// use ml_kem::utils::{generate_polynomial,encode_poly,decode_poly};
+/// use mlkem_fips203::utils::{generate_polynomial,encode_poly,decode_poly};
 /// let sigma = vec![0u8; 32]; // Example seed
 /// let eta = 3;
 /// let b = 0;
@@ -693,7 +693,7 @@ pub fn decode_poly(input_bytes: Vec<u8>, d: usize) -> Polynomial<i64> {
 ///
 /// # Example
 /// ```
-/// use ml_kem::utils::{generate_polynomial,encode_vector};
+/// use mlkem_fips203::utils::{generate_polynomial,encode_vector};
 /// let sigma = vec![0u8; 32]; // Example seed
 /// let eta = 3;
 /// let n = 0;
@@ -724,7 +724,7 @@ pub fn encode_vector(v: Vec<Polynomial<i64>>, d: usize) -> Vec<u8> {
 ///
 /// # Example
 /// ```
-/// use ml_kem::utils::{generate_polynomial,encode_vector,decode_vector};
+/// use mlkem_fips203::utils::{generate_polynomial,encode_vector,decode_vector};
 /// let sigma = vec![0u8; 32]; // Example seed
 /// let eta = 3;
 /// let n = 0;
@@ -785,7 +785,7 @@ fn decompress_ele(x: i64, d: usize) -> i64 {
 ///
 /// # Example
 /// ```
-/// use ml_kem::utils::{generate_polynomial,compress_poly};
+/// use mlkem_fips203::utils::{generate_polynomial,compress_poly};
 /// let sigma = vec![0u8; 32];
 /// let eta = 3;
 /// let n = 0;
@@ -806,7 +806,7 @@ pub fn compress_poly(poly: Polynomial<i64>, d: usize) -> Polynomial<i64> {
 ///
 /// # Example
 /// ```
-/// use ml_kem::utils::{generate_polynomial,compress_vec};
+/// use mlkem_fips203::utils::{generate_polynomial,compress_vec};
 /// let sigma = vec![0u8; 32];
 /// let eta = 3;
 /// let n = 0;
@@ -824,7 +824,7 @@ pub fn compress_vec(v: Vec<Polynomial<i64>>, d: usize) -> Vec<Polynomial<i64>> {
 ///
 /// # Example
 /// ```
-/// use ml_kem::utils::{generate_polynomial,compress_vec,decompress_vec};
+/// use mlkem_fips203::utils::{generate_polynomial,compress_vec,decompress_vec};
 /// let sigma = vec![0u8; 32];
 /// let eta = 3;
 /// let n = 0;
@@ -852,7 +852,7 @@ pub fn decompress_vec(v: Vec<Polynomial<i64>>, d: usize) -> Vec<Polynomial<i64>>
 ///
 /// # Example
 /// ```
-/// use ml_kem::utils::{generate_polynomial,compress_poly,decompress_poly};
+/// use mlkem_fips203::utils::{generate_polynomial,compress_poly,decompress_poly};
 /// let sigma = vec![0u8; 32];
 /// let eta = 3;
 /// let n = 0;
@@ -890,8 +890,8 @@ pub fn decompress_poly(poly: Polynomial<i64>, d: usize) -> Polynomial<i64> {
 ///
 /// # Example
 /// ```
-/// use ml_kem::utils::{generate_polynomial, vec_ntt};
-/// use ml_kem::parameters::Parameters;
+/// use mlkem_fips203::utils::{generate_polynomial, vec_ntt};
+/// use mlkem_fips203::parameters::Parameters;
 /// let params = Parameters::mlkem512();
 /// let sigma = vec![0u8; 32];
 /// let eta = 3;
@@ -926,8 +926,8 @@ pub fn vec_ntt(v: Vec<Polynomial<i64>>, zetas: Vec<i64>) -> Vec<Polynomial<i64>>
 ///
 /// # Example
 /// ```
-/// use ml_kem::utils::{generate_polynomial, vec_ntt, vec_intt};
-/// use ml_kem::parameters::Parameters;
+/// use mlkem_fips203::utils::{generate_polynomial, vec_ntt, vec_intt};
+/// use mlkem_fips203::parameters::Parameters;
 /// let params = Parameters::mlkem512();
 /// let sigma = vec![0u8; 32];
 /// let eta = 3;
@@ -962,8 +962,8 @@ pub fn vec_intt(v: Vec<Polynomial<i64>>, zetas: Vec<i64>) -> Vec<Polynomial<i64>
 ///
 /// # Examples
 /// ```
-/// use ml_kem::utils::{generate_polynomial,poly_ntt};
-/// use ml_kem::parameters::Parameters;
+/// use mlkem_fips203::utils::{generate_polynomial,poly_ntt};
+/// use mlkem_fips203::parameters::Parameters;
 /// let params = Parameters::mlkem512();
 /// let sigma = vec![0u8; 32];
 /// let b = 0;
@@ -1007,8 +1007,8 @@ pub fn poly_ntt(poly: Polynomial<i64>, zetas: Vec<i64>) -> Polynomial<i64> {
 ///
 /// # Examples
 /// ```
-/// use ml_kem::utils::{generate_polynomial,poly_ntt,poly_intt};
-/// let params = ml_kem::parameters::Parameters::mlkem512();
+/// use mlkem_fips203::utils::{generate_polynomial,poly_ntt,poly_intt};
+/// let params = mlkem_fips203::parameters::Parameters::mlkem512();
 /// let sigma = vec![0u8; 32];
 /// let b = 0;
 /// let (poly, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(3329));
@@ -1102,8 +1102,8 @@ pub fn ntt_coefficient_multiplication(f_coeffs: Vec<i64>, g_coeffs: Vec<i64>, ze
 ///
 /// # Examples
 /// ```
-/// use ml_kem::utils::{mod_coeffs, generate_polynomial, poly_ntt, poly_intt, ntt_multiplication, polymul};
-/// let params = ml_kem::parameters::Parameters::mlkem512();
+/// use mlkem_fips203::utils::{mod_coeffs, generate_polynomial, poly_ntt, poly_intt, ntt_multiplication, polymul};
+/// let params = mlkem_fips203::parameters::Parameters::mlkem512();
 /// let sigma = vec![0u8; 32];
 /// let b = 0;
 /// let (p0, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(params.q));
@@ -1154,8 +1154,8 @@ pub fn add_vec(v0: Vec<Polynomial<i64>>, v1: Vec<Polynomial<i64>>, q: i64, f: Po
 /// 
 /// # Examples
 /// ```
-/// use ml_kem::utils::{generate_polynomial,mul_vec_simple};
-/// let params = ml_kem::parameters::Parameters::mlkem512();
+/// use mlkem_fips203::utils::{generate_polynomial,mul_vec_simple};
+/// let params = mlkem_fips203::parameters::Parameters::mlkem512();
 /// let sigma = vec![0u8; 32];
 /// let b = 0;
 /// let (p0, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(3329));
@@ -1188,8 +1188,8 @@ pub fn mul_vec_simple(v0: Vec<Polynomial<i64>>, v1: Vec<Polynomial<i64>>, q: i64
 /// * `result` - vector of polynomials
 /// # Examples
 /// ```
-/// use ml_kem::utils::{generate_polynomial,mul_vec_simple,generate_matrix_from_seed,mul_mat_vec_simple};
-/// let params = ml_kem::parameters::Parameters::mlkem512();
+/// use mlkem_fips203::utils::{generate_polynomial,mul_vec_simple,generate_matrix_from_seed,mul_mat_vec_simple};
+/// let params = mlkem_fips203::parameters::Parameters::mlkem512();
 /// let sigma = vec![0u8; 32];
 /// let b = 0;
 /// let (p0, _b) = generate_polynomial(sigma.clone(), params.eta_1, b, params.n, Some(3329));

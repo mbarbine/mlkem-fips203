@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use ml_kem::ml_kem::MLKEM;
-use ml_kem::parameters::Parameters;
+use mlkem_fips203::ml_kem::MLKEM;
+use mlkem_fips203::parameters::Parameters;
 
 // benchmark decaps for 512
 fn bench_decaps_512(crit: &mut Criterion) {
