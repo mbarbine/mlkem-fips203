@@ -54,14 +54,14 @@ A global parameter `q=3329`, the Kyber prime, is set. The polynomial size is set
 #### Parameter Descriptions:
 
 - **k**: Module rank  
-- **eta_1, eta_2**: Control the **cbd** (centered binomial distribution) for randomness  
-- **d_u, d_v**: Compression & encoding parameters (`d` for `u` and `v`) 
+- **eta_1, eta_2**: Control the `cbd` width (centered binomial distribution) for randomness  
+- **d_u, d_v**: Compression & encoding parameters
 
 ### NTT
 
-We briefly note that this implementation uses a specialized NTT which does not require a `512`th root of unity (which does not exist in `Z_q` since 512 does not divide 3328). 
+We briefly note that this implementation uses a specialized NTT which does not require a `512`th root of unity (which does not exist in `Z_q` since 512 does not divide `3328`). 
 
-On pg. 24 of the FIPS 203 standard paper, they describe that one may use the Chinese remainder theorem to write the ring R_q as a sum of 128 quadratic factors. This ring `T_q` is isomorphic to `R_q`, but we can perform the NTT with only a `256`th root of unity by pairing coefficients.
+On pg. 24 of the FIPS 203 standard paper, they describe that one may use the Chinese remainder theorem to write the ring R_q as a sum of `128` quadratic factors. This ring `T_q` is isomorphic to `R_q`, but we can perform the NTT with only a `256`th root of unity by pairing coefficients.
 
 ### Passing by reference
 
@@ -74,8 +74,8 @@ We use the `Polynomial<i64>` type. This is not ideal (pun intended), and could b
 ### Example
 
 ```
-use ml_kem::ml_kem::MLKEM;
-use ml_kem::parameters::Parameters;
+use mlkem_fips203::ml_kem::MLKEM;
+use mlkem_fips203::parameters::Parameters;
 
 // run the basic keygen/encaps/decaps
 let (ek, dk) = mlkem.keygen(); // Generate public and private keys for KEM
@@ -92,7 +92,7 @@ let shared_k_decaps = match mlkem.decaps(dk,c) { // decapsulate the shared key, 
 
 ### Error handling
 
-As specified in FIPS 203, we handle errors for both `encaps` and `decaps`. We use a `Result<T,E>` return type for this.
+As specified in FIPS 203, we handle errors for both `encaps` and `decaps`. We use a `Result<T,E>` return type.
 
 ### Benchmarks
 
