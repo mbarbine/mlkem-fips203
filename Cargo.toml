@@ -1,6 +1,6 @@
 [package]
 name = "mlkem-fips203"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "MLKEM [512, 768, 1024] module-lattice key encapsulation mechanism following the FIPS 203 standard."
 license = "MIT"
