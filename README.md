@@ -10,7 +10,7 @@ Rust implementation of module-lattice key encapsulation mechanism (ML-KEM) as sp
 
 ### FIPS 203
 
-NIST post-quantum cryptography standard finalized on Aug. 13th, 2022(?): https://csrc.nist.gov/pubs/fips/203/final
+NIST post-quantum cryptography standard finalized on Aug. 13th, 2024: https://csrc.nist.gov/pubs/fips/203/final
 
 ### Disclaimer
 
